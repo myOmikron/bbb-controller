@@ -13,6 +13,8 @@ https://docs.djangoproject.com/en/3.1/ref/settings/
 from pathlib import Path
 
 # Build paths inside the project like this: BASE_DIR / 'subdir'.
+import urllib3
+
 BASE_DIR = Path(__file__).resolve().parent.parent
 
 
@@ -121,3 +123,10 @@ USE_TZ = True
 # https://docs.djangoproject.com/en/3.1/howto/static-files/
 
 STATIC_URL = '/static/'
+
+SHARED_SECRET = "change_me"
+SHARED_SECRET_TIME_DELTA = 5
+
+VERIFY_SSL_CERTS = True
+if not VERIFY_SSL_CERTS:
+    urllib3.disable_warnings(urllib3.exceptions.InsecureRequestWarning)
