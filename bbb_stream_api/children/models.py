@@ -72,22 +72,14 @@ class BBBLive(models.Model):
     url = models.CharField(default="", max_length=255)
     secret = models.CharField(default="", max_length=255)
 
-    def _post(self, endpoint, params):
-        params["checksum"] = get_checksum(params, self.secret, endpoint)
-        return requests.post(
-            os.path.join(self.url, endpoint),
-            json=params,
-            headers={"user-agent": "bbb-controller"}
-        )
-
     def start_stream(self, rtmp_uri, meeting_id, meeting_password):
-        return self._post("startStream", {
+        return _post(self.url, self.secret, "startStream", {
             "rtmp_uri": rtmp_uri,
             "meeting_id": meeting_id,
             "meeting_password": meeting_password,
         })
 
     def stop_stream(self, meeting_id):
-        return self._post("stopStream", {
+        return _post(self.url, self.secret, "stopStream", {
             "meeting_id": meeting_id,
         })
