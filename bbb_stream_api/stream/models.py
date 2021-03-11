@@ -1,4 +1,6 @@
 from django.db import models
+from django.utils.functional import cached_property
+
 from children.models import XmppChat, BBBChat, BBBLive
 
 
@@ -11,29 +13,33 @@ class Stream(models.Model):
     bbb_chat = models.ForeignKey(BBBChat, on_delete=models.CASCADE)
     bbb_live = models.ForeignKey(BBBLive, on_delete=models.CASCADE)
 
-    def start(self):
-        self.bbb_chat.start_chat(
-            chat_id=self.meeting_id,
-            chat_user="Live",
-            callback_secret=self.xmpp_chat.secret,
-            callback_uri=self.xmpp_chat.url,
-            callback_id=self.room_jid
-        ).raise_for_status()
-        self.xmpp_chat.start_chat(
-            chat_id=self.room_jid,
-            callback_secret=self.bbb_chat.secret,
-            callback_uri=self.bbb_chat.url,
-            callback_id=self.meeting_id
-        ).raise_for_status()
+    @cached_property
+    def internal_meeting_id(self):
+        return str(self.bbb_chat.bbb.api.get_meeting_info(self.meeting_id)["xml"]["internalMeetingID"])
 
-        # self.bbb_live.start_stream(
-        #   self.rtmp_uri,
-        #   self.meeting_id,
-        #   self.meeting_password
-        # )
+    def start(self):
+        print(self.bbb_chat.start_chat(
+            self.internal_meeting_id,
+            "Stream",
+            self.xmpp_chat.url,
+            self.xmpp_chat.secret,
+            self.room_jid
+        ).text)
+
+        print(self.xmpp_chat.start_chat(
+            self.room_jid,
+            self.bbb_chat.url,
+            self.bbb_chat.secret,
+            self.internal_meeting_id
+        ).text)
+
+        print(self.bbb_live.start_stream(
+            self.rtmp_uri,
+            self.meeting_id,
+            self.meeting_password
+        ).text)
 
     def end(self):
-        self.bbb_chat.end_chat(self.meeting_id)
-        self.xmpp_chat.end_chat(self.room_jid)
-
-        # self.bbb_live.stop_stream(self.meeting_id)
+        print(self.bbb_chat.end_chat(self.internal_meeting_id).text)
+        print(self.xmpp_chat.end_chat(self.room_jid).text)
+        print(self.bbb_live.stop_stream(self.meeting_id).text)
