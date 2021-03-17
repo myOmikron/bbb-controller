@@ -61,7 +61,6 @@ class StartStream(TemplateView):
         # new stream to start
         stream = Stream.objects.create(
             meeting_id=meeting_id,
-            meeting_password=meeting_password,
             room_jid=room_jid,
             rtmp_uri=rtmp_uri,
             xmpp_chat=xmpp_chat,
