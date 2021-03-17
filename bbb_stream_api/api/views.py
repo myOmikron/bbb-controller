@@ -47,3 +47,36 @@ class StartStream(PostApiPoint):
         )
 
         stream.start()
+
+        return JsonResponse(
+            {"success": True, "message": "Stream started successfully."}
+        )
+
+
+class JoinStream(PostApiPoint):
+
+    endpoint = "joinStream"
+    required_parameters = ["meeting_id", "user_name"]
+
+    def safe_post(self, request, parameters, *args, **kwargs):
+        meeting_id = parameters["meeting_id"]
+        user_name = parameters["user_name"]
+
+        pass  # TODO
+
+
+class EndStream(PostApiPoint):
+
+    endpoint = "endStream"
+    required_parameters = ["meeting_id"]
+
+    def safe_post(self, request, parameters, *args, **kwargs):
+        meeting_id = parameters["meeting_id"]
+
+        stream = Stream.objects.get(meeting_id=meeting_id)
+        stream.end()
+        stream.delete()
+
+        return JsonResponse(
+            {"success": True, "message": "Stream stopped successfully."}
+        )
