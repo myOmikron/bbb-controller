@@ -1,5 +1,5 @@
 """
-WSGI config for bbb_stream_api project.
+WSGI config for bbb_controller project.
 
 It exposes the WSGI callable as a module-level variable named ``application``.
 
@@ -11,6 +11,6 @@ import os
 
 from django.core.wsgi import get_wsgi_application
 
-os.environ.setdefault('DJANGO_SETTINGS_MODULE', 'bbb_stream_api.settings')
+os.environ.setdefault('DJANGO_SETTINGS_MODULE', 'bbb_controller.settings')
 
 application = get_wsgi_application()
