@@ -21,3 +21,8 @@ class BBBLiveAdmin(admin.ModelAdmin):
 @admin.register(XmppChat)
 class XmppChatAdmin(admin.ModelAdmin):
     pass
+
+
+@admin.register(StreamFrontend)
+class StreamFrontendAdmin(admin.ModelAdmin):
+    pass
