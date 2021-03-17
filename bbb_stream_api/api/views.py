@@ -1,53 +1,31 @@
-import json
-
-from django.conf import settings
 from django.db.models import Count
 from django.http import JsonResponse
-from django.views.generic import TemplateView
-from rc_protocol import validate_checksum
 
+from bbb_common_api.views import PostApiPoint
 from children.models import BBB, BBBChat, XmppChat, BBBLive
 from stream.models import Stream
 
 
-class StartStream(TemplateView):
+class StartStream(PostApiPoint):
 
-    def post(self, request, *args, **kwargs):
-        # Decode json
-        try:
-            parameters = json.loads(request.body)
-        except json.decoder.JSONDecodeError:
-            return JsonResponse(
-                {"success": False, "message": "Decoding data failed"},
-                status=400,
-                reason="Decoding data failed"
-            )
+    endpoint = "startStream"
+    required_parameters = ["meeting_id"]
 
-        # Validate checksum
-        try:
-            if not validate_checksum(parameters, settings.SHARED_SECRET,
-                                     "startStream", settings.SHARED_SECRET_TIME_DELTA):
-                return JsonResponse(
-                    {"success": False, "message": "Checksum was incorrect."},
-                    status=400,
-                    reason="Checksum was incorrect."
-                )
-        except ValueError:
-            return JsonResponse(
-                {"success": False, "message": "No checksum was given."},
-                status=400,
-                reason="No checksum was given."
-            )
-
-        # TODO check for existence
-        parameters: dict
+    def safe_post(self, request, parameters, *args, **kwargs):
         meeting_id = parameters["meeting_id"]
         room_jid = parameters["room_jid"]
-        meeting_password = parameters.setdefault("meeting_password", "ap")
         rtmp_uri = parameters.setdefault("rtmp_uri", "")
 
         # Search in bbb instances for meeting id
-        bbb = BBB.objects.first()  # TODO replace with searching code
+        for bbb in BBB.objects.all():
+            if bbb.api.is_meeting_running(meeting_id).is_meeting_running():
+                break
+        else:
+            return JsonResponse(
+                {"success": False, "message": "No matching running meeting found."},
+                status=404,
+                reason="No matching running meeting found."
+            )
 
         # xmpp chat with least running streams
         xmpp_chat = XmppChat.objects.annotate(streams=Count("stream")).earliest("streams")
