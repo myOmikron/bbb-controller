@@ -1,7 +1,7 @@
 from django.db import models
 from django.utils.functional import cached_property
 
-from children.models import XmppChat, BBBChat, BBBLive
+from children.models import XmppChat, BBBChat, BBBLive, StreamFrontend
 
 
 class Stream(models.Model):
@@ -11,6 +11,7 @@ class Stream(models.Model):
     xmpp_chat = models.ForeignKey(XmppChat, on_delete=models.CASCADE)
     bbb_chat = models.ForeignKey(BBBChat, on_delete=models.CASCADE)
     bbb_live = models.ForeignKey(BBBLive, on_delete=models.CASCADE)
+    frontend = models.ForeignKey(StreamFrontend, on_delete=models.CASCADE)
 
     @cached_property
     def meeting_password(self):

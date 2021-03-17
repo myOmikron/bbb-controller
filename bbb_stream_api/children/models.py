@@ -27,6 +27,9 @@ class BBB(models.Model):
     def api(self):
         return BigBlueButton(self.url, self.secret)
 
+    def __str__(self):
+        return self.url
+
 
 class XmppChat(models.Model):
 
@@ -43,6 +46,9 @@ class XmppChat(models.Model):
 
     def end_chat(self, chat_id):
         return _post(self.url, self.secret, "endChat", {"chat_id": chat_id})
+
+    def __str__(self):
+        return self.url
 
 
 class BBBChat(models.Model):
@@ -66,6 +72,9 @@ class BBBChat(models.Model):
     def end_chat(self, meeting_id):
         return _post(self.url, self.secret, "endChat", {"chat_id": meeting_id})
 
+    def __str__(self):
+        return self.url
+
 
 class BBBLive(models.Model):
 
@@ -83,3 +92,29 @@ class BBBLive(models.Model):
         return _post(self.url, self.secret, "stopStream", {
             "meeting_id": meeting_id,
         })
+
+    def __str__(self):
+        return self.url
+
+
+class StreamFrontend(models.Model):
+
+    url = models.CharField(default="", max_length=255)
+    secret = models.CharField(default="", max_length=255)
+
+    @property
+    def api_url(self):
+        return os.path.join(self.url, "api", "v1")
+
+    def open_channel(self, meeting_id):
+        return _post(self.api_url, self.secret, "openChannel", {
+            "meeting_id": meeting_id,
+        })
+
+    def close_channel(self, meeting_id):
+        return _post(self.api_url, self.secret, "closeChannel", {
+            "meeting_id": meeting_id,
+        })
+
+    def __str__(self):
+        return self.url

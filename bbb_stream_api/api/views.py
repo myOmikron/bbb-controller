@@ -1,8 +1,12 @@
+import os
+
 from django.db.models import Count
-from django.http import JsonResponse
+from django.http import JsonResponse, HttpResponseRedirect
+from django.utils.http import urlencode
+from rc_protocol import get_checksum
 
 from bbb_common_api.views import PostApiPoint
-from children.models import BBB, BBBChat, XmppChat, BBBLive
+from children.models import BBB, BBBChat, XmppChat, BBBLive, StreamFrontend
 from stream.models import Stream
 
 
@@ -14,7 +18,6 @@ class StartStream(PostApiPoint):
     def safe_post(self, request, parameters, *args, **kwargs):
         meeting_id = parameters["meeting_id"]
         room_jid = parameters["room_jid"]
-        rtmp_uri = parameters.setdefault("rtmp_uri", "")
 
         # Search in bbb instances for meeting id
         for bbb in BBB.objects.all():
@@ -35,6 +38,16 @@ class StartStream(PostApiPoint):
 
         # bbb live with least running streams
         bbb_live = BBBLive.objects.annotate(streams=Count("stream")).earliest("streams")
+
+        # frontend with least running streams
+        frontend = StreamFrontend.objects.annotate(streams=Count("stream")).earliest("streams")
+
+        _key = frontend.open_channel(meeting_id)["content"]["streaming_key"]
+        rtmp_uri = os.path.join(frontend.url, "stream", _key)
+        _replace = "http"
+        if rtmp_uri.startswith("https"):
+            _replace = "https"
+        rtmp_uri.replace(_replace, "rtmp")
 
         # new stream to start
         stream = Stream.objects.create(
@@ -62,7 +75,17 @@ class JoinStream(PostApiPoint):
         meeting_id = parameters["meeting_id"]
         user_name = parameters["user_name"]
 
-        pass  # TODO
+        stream = Stream.objects.get(meeting_id=meeting_id)
+
+        get = {
+            "meeting_id": meeting_id,
+            "user_name": user_name,
+        }
+        get["checksum"] = get_checksum(get, stream.frontend.secret, "join")
+
+        return HttpResponseRedirect(
+            os.path.join(stream.frontend.url, "/api/v1/join?") + urlencode(get)
+        )
 
 
 class EndStream(PostApiPoint):
@@ -75,6 +98,7 @@ class EndStream(PostApiPoint):
 
         stream = Stream.objects.get(meeting_id=meeting_id)
         stream.end()
+        stream.frontend.close_channel(stream.meeting_id)
         stream.delete()
 
         return JsonResponse(
