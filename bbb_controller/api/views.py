@@ -42,7 +42,7 @@ class StartStream(PostApiPoint):
         # frontend with least running streams
         frontend = StreamFrontend.objects.annotate(streams=Count("stream")).earliest("streams")
 
-        _key = frontend.open_channel(meeting_id)["content"]["streaming_key"]
+        _key = frontend.open_channel(meeting_id).json()["content"]["streaming_key"]
         rtmp_uri = os.path.join(frontend.url, "stream", _key)
         _replace = "http"
         if rtmp_uri.startswith("https"):
@@ -54,6 +54,7 @@ class StartStream(PostApiPoint):
             meeting_id=meeting_id,
             room_jid=room_jid,
             rtmp_uri=rtmp_uri,
+            frontend=frontend,
             xmpp_chat=xmpp_chat,
             bbb_chat=bbb_chat,
             bbb_live=bbb_live,
