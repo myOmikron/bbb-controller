@@ -4,6 +4,7 @@ from django.conf import settings
 from django.db import models
 from django.utils.functional import cached_property
 from bigbluebutton_api_python import BigBlueButton
+from django.utils.http import urlencode
 from rc_protocol import get_checksum
 import requests
 
@@ -18,7 +19,29 @@ def _post(base_url, secret, endpoint, params):
     )
 
 
-class BBB(models.Model):
+class _Child(models.Model):
+
+    url: str
+    secret: str
+
+    def __str__(self):
+        return self.url
+
+    def get_absolute_url(self):
+        return "/admin/calls?" + urlencode({
+            "url": self.api_url,
+            "secret": self.secret
+        })
+
+    @property
+    def api_url(self):
+        return self.url
+
+    class Meta:
+        abstract = True
+
+
+class BBB(_Child):
 
     url = models.CharField(default="", max_length=255)
     secret = models.CharField(default="", max_length=255)
@@ -27,11 +50,8 @@ class BBB(models.Model):
     def api(self):
         return BigBlueButton(self.url, self.secret)
 
-    def __str__(self):
-        return self.url
 
-
-class XmppChat(models.Model):
+class XmppChat(_Child):
 
     url = models.CharField(default="", max_length=255)
     secret = models.CharField(default="", max_length=255)
@@ -47,11 +67,8 @@ class XmppChat(models.Model):
     def end_chat(self, chat_id):
         return _post(self.url, self.secret, "endChat", {"chat_id": chat_id})
 
-    def __str__(self):
-        return self.url
 
-
-class BBBChat(models.Model):
+class BBBChat(_Child):
 
     bbb = models.OneToOneField(BBB, on_delete=models.CASCADE)
     secret = models.CharField(default="", max_length=255)
@@ -72,11 +89,8 @@ class BBBChat(models.Model):
     def end_chat(self, meeting_id):
         return _post(self.url, self.secret, "endChat", {"chat_id": meeting_id})
 
-    def __str__(self):
-        return self.url
 
-
-class BBBLive(models.Model):
+class BBBLive(_Child):
 
     url = models.CharField(default="", max_length=255)
     secret = models.CharField(default="", max_length=255)
@@ -93,11 +107,8 @@ class BBBLive(models.Model):
             "meeting_id": meeting_id,
         })
 
-    def __str__(self):
-        return self.url
 
-
-class StreamFrontend(models.Model):
+class StreamFrontend(_Child):
 
     url = models.CharField(default="", max_length=255)
     secret = models.CharField(default="", max_length=255)
@@ -115,6 +126,3 @@ class StreamFrontend(models.Model):
         return _post(self.api_url, self.secret, "closeChannel", {
             "meeting_id": meeting_id,
         })
-
-    def __str__(self):
-        return self.url
