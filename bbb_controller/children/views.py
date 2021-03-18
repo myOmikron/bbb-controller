@@ -19,13 +19,19 @@ class MakeCallsView(LoginRequiredMixin, TemplateView):
         secret = request.GET.get("secret", None)
         parameters = json.loads(request.GET.get("parameters", "null"))
 
-        if url and secret and parameters:
+        if url is not None and secret is not None and parameters is not None:
             parameters["checksum"] = get_checksum(parameters, secret, os.path.basename(url))
             response = requests.request(method, url, json=parameters, verify=settings.VERIFY_SSL_CERTS)
+
+            try:
+                text = json.dumps(response.json(), indent=4)
+            except json.decoder.JSONDecodeError:
+                text = response.text
+
             context = {
                 "response": True,
                 "status_code": response.status_code,
-                "json": json.dumps(response.json(), indent=4),
+                "text": text,
             }
         else:
             context = {"response": False}
