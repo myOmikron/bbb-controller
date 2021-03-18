@@ -12,6 +12,7 @@ from rc_protocol import get_checksum
 class MakeCallsView(LoginRequiredMixin, TemplateView):
 
     template_name = "calls.html"
+    login_url = "/admin/login/"
 
     def get(self, request, *args, **kwargs):
         method = request.GET.get("method", "post")
