@@ -17,7 +17,15 @@ class MakeCallsView(LoginRequiredMixin, TemplateView):
         method = request.GET.get("method", "post")
         url = request.GET.get("url", None)
         secret = request.GET.get("secret", None)
-        parameters = json.loads(request.GET.get("parameters", "null"))
+        parameters = json.loads(request.GET.get("parameters", "{}"))
+
+        context = {
+            "response": False,
+            "method": method,
+            "url": url,
+            "secret": secret,
+            "parameters": json.dumps(parameters, indent=4)
+        }
 
         if url is not None and secret is not None and parameters is not None:
             parameters["checksum"] = get_checksum(parameters, secret, os.path.basename(url))
@@ -32,8 +40,7 @@ class MakeCallsView(LoginRequiredMixin, TemplateView):
                 "response": True,
                 "status_code": response.status_code,
                 "text": text,
+                **context
             }
-        else:
-            context = {"response": False}
 
         return render(request, self.template_name, context=context)

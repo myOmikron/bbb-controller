@@ -6,6 +6,22 @@
 </head>
 <body>
 
+<form>
+    <p>Method:</p>
+    <p><label><input name="method" id="method" value="{{ method }}"></label></p>
+
+    <p>Url:</p>
+    <p><label><input name="url" id="url" value="{{ url }}"></label></p>
+
+    <p>Secret:</p>
+    <p><label><input name="secret" id="secret" value="{{ secret }}"></label></p>
+
+    <p>Parameters:</p>
+    <p><label><textarea name="parameters" id="parameters">{{ parameters }}</textarea></label></p>
+
+    <p><input type="submit" value="Go!"></p>
+</form>
+
 {% if response %}
     <h1>{{ status_code }}</h1>
     <pre><code>{{ text }}</code></pre>
