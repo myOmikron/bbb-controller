@@ -3,27 +3,80 @@
 <head>
     <meta charset="UTF-8">
     <title>Make API calls</title>
+
+    <style>
+        body {
+            padding: 2vw;
+        }
+        .flex-horizontal {
+            display: flex;
+            flex-direction: row;
+        }
+        .button {
+            width: 5vw;
+            height: 2vw;
+        }
+        .textline {
+            width: 15vw;
+        }
+        textarea {
+            width: 15vw;
+            height: 11.5vw;
+        }
+        .vertical-line {
+            background-color: #DDD;
+            height: 15vw;
+            width: 0.1vw;
+            margin: 1vw;
+        }
+    </style>
 </head>
 <body>
 
-<form>
-    <p>Method:</p>
-    <p><label><input name="method" id="method" value="{{ method }}"></label></p>
+<form><div class="flex-horizontal">
+    <div>
+        <div class="flex-horizontal">
+            <div>
+                <p><label>
+                    <select name="method" id="method" class="button">
+                        <option value="get" {% if method == "get" %}selected=""{% endif %}>GET</option>
+                        <option value="post" {% if method == "post" %}selected=""{% endif %}>POST</option>
+                    </select>
+                </label></p>
+            </div>
+            <div>
+                <label>
+                    <input type="checkbox" class="button"
+                           id="redirect" name="redirect"
+                           value="true" {% if redirect %}checked=""{% endif %}>
+                </label>
+                <p style="text-align: center">Redirect</p>
+            </div>
+            <div>
+                <p><input type="submit" class="button" value="Go!"></p>
+            </div>
+        </div>
 
-    <p>Url:</p>
-    <p><label><input name="url" id="url" value="{{ url }}"></label></p>
 
-    <p>Secret:</p>
-    <p><label><input name="secret" id="secret" value="{{ secret }}"></label></p>
+        <p>Url:</p>
+        <p><label>
+            <input class="textline" name="url" id="url" value="{{ url }}">
+        </label></p>
 
-    <p>Parameters:</p>
-    <p><label><textarea name="parameters" id="parameters">{{ parameters }}</textarea></label></p>
+        <p>Secret:</p>
+        <p><label>
+            <input class="textline" name="secret" id="secret" value="{{ secret }}">
+        </label></p>
 
-    <p>Redirect:</p>
-    <p><label><input type="checkbox" name="redirect" value="true" {% if redirect %}checked=""{% endif %}></label></p>
-
-    <p><input type="submit" value="Go!"></p>
-</form>
+    </div>
+    <div class="vertical-line"></div>
+    <div>
+        <p>Parameters:</p>
+        <p><label>
+            <textarea name="parameters" id="parameters">{{ parameters }}</textarea>
+        </label></p>
+    </div>
+</div></form>
 
 {% if response %}
     <h1>{{ status_code }}</h1>
