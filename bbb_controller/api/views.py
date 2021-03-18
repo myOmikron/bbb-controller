@@ -47,7 +47,7 @@ class StartStream(PostApiPoint):
         _replace = "http"
         if rtmp_uri.startswith("https"):
             _replace = "https"
-        rtmp_uri.replace(_replace, "rtmp")
+        rtmp_uri = rtmp_uri.replace(_replace, "rtmp")
 
         # new stream to start
         stream = Stream.objects.create(
