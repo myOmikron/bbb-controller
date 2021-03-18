@@ -50,10 +50,10 @@ class MakeCallsView(LoginRequiredMixin, TemplateView):
                 text = response.text
 
             context = {
+                **context,
                 "response": True,
                 "status_code": response.status_code,
                 "text": text,
-                **context
             }
 
         return render(request, self.template_name, context=context)
