@@ -3,7 +3,9 @@ import os
 
 import requests
 from django.conf import settings
+from django.http import HttpResponseRedirect
 from django.shortcuts import render
+from django.utils.http import urlencode
 from django.views.generic import TemplateView
 from django.contrib.auth.mixins import LoginRequiredMixin
 from rc_protocol import get_checksum
@@ -19,13 +21,15 @@ class MakeCallsView(LoginRequiredMixin, TemplateView):
         url = request.GET.get("url", None)
         secret = request.GET.get("secret", None)
         parameters = json.loads(request.GET.get("parameters", "{}"))
+        redirect = json.loads(request.GET.get("redirect", "false"))
 
         context = {
             "response": False,
             "method": method,
             "url": url,
             "secret": secret,
-            "parameters": json.dumps(parameters, indent=4)
+            "parameters": json.dumps(parameters, indent=4),
+            "redirect": redirect
         }
 
         if method not in ("get", "post"):
@@ -35,8 +39,10 @@ class MakeCallsView(LoginRequiredMixin, TemplateView):
             parameters["checksum"] = get_checksum(parameters, secret, os.path.basename(url))
             if method == "post":
                 response = requests.post(method, url, json=parameters, verify=settings.VERIFY_SSL_CERTS)
-            else:
+            elif not redirect:
                 response = requests.get(method, url, params=parameters, verify=settings.VERIFY_SSL_CERTS)
+            else:
+                return HttpResponseRedirect(url + "?" + urlencode(parameters))
 
             try:
                 text = json.dumps(response.json(), indent=4)
