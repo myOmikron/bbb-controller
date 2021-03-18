@@ -19,6 +19,13 @@ class StartStream(PostApiPoint):
         meeting_id = parameters["meeting_id"]
         room_jid = parameters["room_jid"]
 
+        if Stream.objects.filter(meeting_id=meeting_id).count() > 0:
+            return JsonResponse(
+                {"success": False, "message": "There is already a stream running"},
+                status=304,
+                reason="There is already a stream running"
+            )
+
         # Search in bbb instances for meeting id
         for bbb in BBB.objects.all():
             if bbb.api.is_meeting_running(meeting_id).is_meeting_running():
@@ -76,7 +83,14 @@ class JoinStream(PostApiPoint):
         meeting_id = parameters["meeting_id"]
         user_name = parameters["user_name"]
 
-        stream = Stream.objects.get(meeting_id=meeting_id)
+        try:
+            stream = Stream.objects.get(meeting_id=meeting_id)
+        except Stream.DoesNotExist:
+            return JsonResponse(
+                {"success": False, "message": "There is no stream running for this meeting"},
+                status=404,
+                reason="There is no stream running for this meeting"
+            )
 
         get = {
             "meeting_id": meeting_id,
@@ -97,7 +111,15 @@ class EndStream(PostApiPoint):
     def safe_post(self, request, parameters, *args, **kwargs):
         meeting_id = parameters["meeting_id"]
 
-        stream = Stream.objects.get(meeting_id=meeting_id)
+        try:
+            stream = Stream.objects.get(meeting_id=meeting_id)
+        except Stream.DoesNotExist:
+            return JsonResponse(
+                {"success": False, "message": "There is no stream running for this meeting"},
+                status=404,
+                reason="There is no stream running for this meeting"
+            )
+
         stream.end()
         stream.frontend.close_channel(stream.meeting_id)
         stream.delete()
