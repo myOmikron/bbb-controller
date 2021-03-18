@@ -28,9 +28,15 @@ class MakeCallsView(LoginRequiredMixin, TemplateView):
             "parameters": json.dumps(parameters, indent=4)
         }
 
-        if url is not None and secret is not None and parameters is not None:
+        if method not in ("get", "post"):
+            pass
+
+        elif url is not None and secret is not None and parameters is not None:
             parameters["checksum"] = get_checksum(parameters, secret, os.path.basename(url))
-            response = requests.request(method, url, json=parameters, verify=settings.VERIFY_SSL_CERTS)
+            if method == "post":
+                response = requests.post(method, url, json=parameters, verify=settings.VERIFY_SSL_CERTS)
+            else:
+                response = requests.get(method, url, params=parameters, verify=settings.VERIFY_SSL_CERTS)
 
             try:
                 text = json.dumps(response.json(), indent=4)
