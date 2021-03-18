@@ -38,9 +38,9 @@ class MakeCallsView(LoginRequiredMixin, TemplateView):
         elif url is not None and secret is not None and parameters is not None:
             parameters["checksum"] = get_checksum(parameters, secret, os.path.basename(url))
             if method == "post":
-                response = requests.post(method, url, json=parameters, verify=settings.VERIFY_SSL_CERTS)
+                response = requests.post(url, json=parameters, verify=settings.VERIFY_SSL_CERTS)
             elif not redirect:
-                response = requests.get(method, url, params=parameters, verify=settings.VERIFY_SSL_CERTS)
+                response = requests.get(url, params=parameters, verify=settings.VERIFY_SSL_CERTS)
             else:
                 return HttpResponseRedirect(url + "?" + urlencode(parameters))
 
