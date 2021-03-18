@@ -22,9 +22,12 @@ class MakeCallsView(LoginRequiredMixin, TemplateView):
         if url and secret and parameters:
             parameters["checksum"] = get_checksum(parameters, secret, os.path.basename(url))
             response = requests.request(method, url, json=parameters, verify=settings.VERIFY_SSL_CERTS)
+            context = {
+                "response": True,
+                "status_code": response.status_code,
+                "json": json.dumps(response.json(), indent=4),
+            }
         else:
-            response = None
+            context = {"response": False}
 
-        return render(request, self.template_name, context={
-            "response": response
-        })
+        return render(request, self.template_name, context=context)

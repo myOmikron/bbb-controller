@@ -6,5 +6,10 @@
 </head>
 <body>
 
+{% if response %}
+    <h1>{{ status_code }}</h1>
+    <pre><code>{{ json }}</code></pre>
+{% endif %}
+
 </body>
 </html>
