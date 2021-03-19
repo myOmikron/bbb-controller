@@ -22,6 +22,15 @@ Unless stated otherwise, every endpoint responds with a valid json object of the
 }
 ```
 
+The following are status codes shared by every endpoint:
+
+Status code     | Message                                     | Cause
+----------------|---------------------------------------------|----------------------------------------------
+400 Bad Request | Decoding data failed.                       | The request's body wasn't a valid json object.
+400 Bad Requst  | No checksum was given.                      | There is no checksum parameter. See Authentication above.
+400 Bad Request | Checksum was incorrect.                     | Perhaps wrong salt (= endpoint), wrong secret or times out of sync.
+400 Bad Request | Parameter {param} is mandatory but missing. | A required parameter is missing.
+
 ### External Endpoints
 
 #### `startStream`
@@ -37,6 +46,12 @@ Parameters      | Required | Type | Description
 meeting_id      | Yes      | str  | The id of a running bigbluebutton meeting.
 welcome_msg     | No       | str  | A welcome message that gets displayed on the chat window when the participant joins.
 redirect_url    | No       | str  | An url to redirect the users to, once the stream ended.
+
+Status code      | Message                                     | Cause
+-----------------|---------------------------------------------|----------------------------------------------
+404 Not Found    | No matching running meeting found.          | The `meeting_id` doesn't correspond to any running meeting. Perhaps it wasn't created yet.
+304 Not Modified | There is already a stream running.          | The meeting is already being streamed.
+200 OK           | Stream started successfully.                |
 
 #### `joinStream`
 
@@ -55,6 +70,11 @@ Parameters      | Required | Type | Description
 meeting_id      | Yes      | str  | The id of a streamed bigbluebutton meeting.
 user_name       | Yes      | str  | User's name to display in participants list and chat
 
+Status code     | Message                                      | Cause
+----------------|----------------------------------------------|-----------------------------------------------------
+404 Not Found   | There is no stream running for this meeting. | Wrong `meeting_id` or the stream wasn't started yet.
+302 Found       | ---                                          | Request was successful, now redirect to the frontend.
+
 #### `endStream`
 
 This method stops a bigbluebutton meeting's stream.
@@ -64,6 +84,11 @@ This method stops a bigbluebutton meeting's stream.
 Parameters      | Required | Type | Description
 ----------------|----------|------|------------
 meeting_id      | Yes      | str  | The id of a streamed bigbluebutton meeting.
+
+Status code     | Message                                      | Cause
+----------------|----------------------------------------------|-----------------------------------------------------
+404 Not Found   | There is no stream running for this meeting. | Wrong `meeting_id` or the stream wasn't started yet.
+200 OK     | Stream stopped successfully.                 |
 
 ### Internal Endpoints
 
