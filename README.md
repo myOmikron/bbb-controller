@@ -13,7 +13,7 @@ The authentication is required at every endpoint.
 
 In `POST` requests, parameters and the authentication checksum has to be provided as a valid json object in the request's body.
 
-Unless stated otherwise, every endpoint's respond is a valid json object of the following form:
+Unless stated otherwise, every endpoint responds with a valid json object of the following form:
 
 ```json
 {
