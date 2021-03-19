@@ -11,9 +11,9 @@ The authentication is required at every endpoint.
 
 ### Parameters and responses
 
-In `POST` requests parameters and the authentication checksum are to be provided as a valid json object in the request's body.
+In `POST` requests, parameters and the authentication checksum has to be provided as a valid json object in the request's body.
 
-Unless stated otherwise every endpoint responds is a valid json object of the following form:
+Unless stated otherwise, every endpoint respond is a valid json object of the following form:
 
 ```json
 {
@@ -28,7 +28,7 @@ Unless stated otherwise every endpoint responds is a valid json object of the fo
 
 This method starts a stream for a running bigbluebutton meeting.
 
-The starting process may take a minute, but since this project only forwards commands to others, this method will responde before the stream is actually running.
+The starting process may take a minute, but since this project only forwards commands to others, this method will respond before the stream is actually running.
 
 - Method: `POST`
 
@@ -57,7 +57,7 @@ user_name       | Yes      | str  | User's name to display in participants list 
 
 #### `endStream`
 
-This method stops a streamed bigbluebutton meeting's stream.
+This method stops a bigbluebutton meeting's stream.
 
 - Method: `POST`
 
