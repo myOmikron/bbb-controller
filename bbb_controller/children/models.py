@@ -73,9 +73,12 @@ class BBBChat(_Child):
     bbb = models.OneToOneField(BBB, on_delete=models.CASCADE)
     secret = models.CharField(default="", max_length=255)
 
-    @property
+    @cached_property
     def url(self):
-        return os.path.join(self.bbb.url, "chat")
+        url = self.bbb.url.rstrip("/")
+        if url.endswith("bigbluebutton"):
+            url = os.path.dirname(url)
+        return url + "/api/chat"
 
     def start_chat(self, meeting_id, chat_user, xmpp_uri, xmpp_secret, room_jid):
         return _post(self.url, self.secret, "startChat", {
@@ -116,6 +119,19 @@ class StreamFrontend(_Child):
     @property
     def api_url(self):
         return os.path.join(self.url, "api", "v1")
+
+    def start_chat(self, meeting_id, bbb_uri="", bbb_secret=""):
+        return _post(self.api_url, self.secret, "startChat", {
+            "chat_id": meeting_id,
+            "callback_uri": bbb_uri,
+            "callback_secret": bbb_secret,
+            "callback_id": meeting_id,
+        })
+
+    def end_chat(self, meeting_id):
+        return _post(self.api_url, self.secret, "endChat", {
+            "chat_id": meeting_id
+        })
 
     def open_channel(self, meeting_id):
         return _post(self.api_url, self.secret, "openChannel", {

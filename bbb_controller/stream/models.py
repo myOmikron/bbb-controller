@@ -25,16 +25,15 @@ class Stream(models.Model):
         print(self.bbb_chat.start_chat(
             self.meeting_id,
             "Stream",
-            self.xmpp_chat.url,
-            self.xmpp_chat.secret,
-            self.room_jid
+            self.frontend.api_url,
+            self.frontend.secret,
+            self.meeting_id
         ).text)
 
-        print(self.xmpp_chat.start_chat(
-            self.room_jid,
+        print(self.frontend.start_chat(
+            self.meeting_id,
             self.bbb_chat.url,
-            self.bbb_chat.secret,
-            self.meeting_id
+            self.bbb_chat.secret
         ).text)
 
         print(self.bbb_live.start_stream(
