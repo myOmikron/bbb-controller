@@ -6,7 +6,7 @@
 
     <style>
         body {
-            padding: 2vw;
+            margin: 0;
         }
         .flex-horizontal {
             display: flex;
@@ -33,15 +33,13 @@
             width: 0.1vw;
             margin: 1vw;
         }
-        aside {
-            position: absolute;
-            top: 0;
-            right: 5vw;
+        .api-menu {
+            margin: 2vw;
         }
-        aside input[type=radio] {
+        .api-menu input[type=radio] {
             display: none;
         }
-        aside label {
+        .api-menu label {
             display: block;
             padding: 10px;
             background-color: #EEE;
@@ -49,81 +47,93 @@
             border-color: #555;
             border-width: 1px;
         }
-        aside label:hover {
-            background-color: #DDD;
+        .api-menu label:hover {
+            background-color: #CCC;
         }
-        .api-endpoints {
+        .api-menu .api-endpoints {
             display: none;
         }
+        .api-menu input:checked + label {
+            background-color: #CCC;
+        }
         {% for i, _ in apis %}
-            #radiobutton{{ i }}:checked ~ #endpoints{{ i }} {
+            #radio-{{ i }}:checked ~ #endpoints{{ i }} {
                 display: inherit;
             }
         {% endfor %}
+
+        form {
+            margin: 2vw;
+        }
     </style>
 </head>
 <body>
-
-<form><div class="flex-horizontal">
-    <div>
-        <div class="flex-horizontal">
-            <div>
-                <p><label>
-                    <select name="method" id="method" class="button">
-                        <option value="get" {% if method == "get" %}selected=""{% endif %}>GET</option>
-                        <option value="post" {% if method == "post" %}selected=""{% endif %}>POST</option>
-                    </select>
-                </label></p>
+<div class="flex-horizontal">
+    <div class="api-menu flex-vertical">
+        <h1>Api Type:</h1>
+        {% for i, api in apis %}
+            <input type="radio" name="apiType" id="radio-{{ i }}">
+            <label for="radio-{{ i }}">{{ api.name }}</label>
+        {% endfor %}
+        <h1>Api Endpoints:</h1>
+        {% for i, api in apis %}
+            <div id="endpoints{{ i }}" class="api-endpoints flex-vertical">
+                {% for endpoint in api.endpoints %}
+                    <input type="radio" name="endpoint" id="radio-{{ i }}-{{ endpoint.name }}">
+                    <label for="radio-{{ i }}-{{ endpoint.name }}"
+                           onclick="void setEndpoint('{{ endpoint.method }}', '{{ endpoint.name }}');">
+                        {{ endpoint.name }}
+                    </label>
+                {% endfor %}
             </div>
-            <div>
-                <label>
-                    <input type="checkbox" class="button"
-                           id="redirect" name="redirect"
-                           value="true" {% if redirect %}checked=""{% endif %}>
-                </label>
-                <p style="text-align: center">Redirect</p>
-            </div>
-            <div>
-                <p><input type="submit" class="button" value="Go!"></p>
-            </div>
-        </div>
-
-
-        <p>Url:</p>
-        <p><label>
-            <input class="textline" name="url" id="url" value="{{ url }}">
-        </label></p>
-
-        <p>Secret:</p>
-        <p><label>
-            <input class="textline" name="secret" id="secret" value="{{ secret }}">
-        </label></p>
-
+        {% endfor %}
     </div>
-    <div class="vertical-line"></div>
-    <div>
-        <p>Parameters:</p>
-        <p><label>
-            <textarea name="parameters" id="parameters">{{ parameters }}</textarea>
-        </label></p>
-    </div>
-</div></form>
 
-<aside class="flex-vertical">
-    <h1>Api Type:</h1>
-    {% for i, api in apis %}
-        <input type="radio" name="apiType" id="radiobutton{{ i }}">
-        <label for="radiobutton{{ i }}">{{ api.name }}</label>
-    {% endfor %}
-    <h1>Api Endpoints:</h1>
-    {% for i, api in apis %}
-        <div id="endpoints{{ i }}" class="api-endpoints flex-vertical">
-            {% for endpoint in api.endpoints %}
-                <label onclick="void setEndpoint('{{ endpoint.method }}', '{{ endpoint.name }}');">{{ endpoint.name }}</label>
-            {% endfor %}
+    <form><div class="flex-horizontal">
+        <div>
+            <div class="flex-horizontal">
+                <div>
+                    <p><label>
+                        <select name="method" id="method" class="button">
+                            <option value="get" {% if method == "get" %}selected=""{% endif %}>GET</option>
+                            <option value="post" {% if method == "post" %}selected=""{% endif %}>POST</option>
+                        </select>
+                    </label></p>
+                </div>
+                <div>
+                    <label>
+                        <input type="checkbox" class="button"
+                               id="redirect" name="redirect"
+                               value="true" {% if redirect %}checked=""{% endif %}>
+                    </label>
+                    <p style="text-align: center">Redirect</p>
+                </div>
+                <div>
+                    <p><input type="submit" class="button" value="Go!"></p>
+                </div>
+            </div>
+
+
+            <p>Url:</p>
+            <p><label>
+                <input class="textline" name="url" id="url" value="{{ url }}">
+            </label></p>
+
+            <p>Secret:</p>
+            <p><label>
+                <input class="textline" name="secret" id="secret" value="{{ secret }}">
+            </label></p>
+
         </div>
-    {% endfor %}
-</aside>
+        <div class="vertical-line"></div>
+        <div>
+            <p>Parameters:</p>
+            <p><label>
+                <textarea name="parameters" id="parameters">{{ parameters }}</textarea>
+            </label></p>
+        </div>
+    </div></form>
+</div>
 
 <script>
     function setEndpoint(method, endpoint) {
