@@ -1,5 +1,6 @@
 import json
 import os
+from typing import List
 
 import requests
 from django.conf import settings
@@ -9,6 +10,40 @@ from django.utils.http import urlencode
 from django.views.generic import TemplateView
 from django.contrib.auth.mixins import LoginRequiredMixin
 from rc_protocol import get_checksum
+
+
+class Endpoint:
+    def __init__(self, method: str, name: str):
+        self.method = method
+        self.name = name
+
+
+class Api:
+    def __init__(self, name: str, endpoints: List[Endpoint]):
+        self.name = name
+        self.endpoints = endpoints
+
+
+apis = list(enumerate([
+    Api("Controller",
+        [Endpoint("post", "startStream"),
+         Endpoint("get",  "joinStream"),
+         Endpoint("post", "endStream")]),
+    Api("Streaming Frontend",
+        [Endpoint("post", "openChannel"),
+         Endpoint("post", "closeChannel"),
+         Endpoint("post", "startChat"),
+         Endpoint("post", "sendMessage"),
+         Endpoint("post", "closeChat")]),
+    Api("Streamer",
+        [Endpoint("post", "startStream"),
+         Endpoint("post", "endStream")]),
+    Api("BBB Chat",
+        [Endpoint("get",  "runningChats"),
+         Endpoint("post", "startChat"),
+         Endpoint("post", "sendMessage"),
+         Endpoint("post", "endChat")]),
+]))
 
 
 class MakeCallsView(LoginRequiredMixin, TemplateView):
@@ -29,7 +64,8 @@ class MakeCallsView(LoginRequiredMixin, TemplateView):
             "url": url,
             "secret": secret,
             "parameters": json.dumps(parameters, indent=4),
-            "redirect": redirect
+            "redirect": redirect,
+            "apis": apis,
         }
 
         if method not in ("get", "post"):

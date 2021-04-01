@@ -12,6 +12,10 @@
             display: flex;
             flex-direction: row;
         }
+        .flex-vertical {
+            display: flex;
+            flex-direction: column;
+        }
         .button {
             width: 5vw;
             height: 2vw;
@@ -29,6 +33,33 @@
             width: 0.1vw;
             margin: 1vw;
         }
+        aside {
+            position: absolute;
+            top: 0;
+            right: 5vw;
+        }
+        aside input[type=radio] {
+            display: none;
+        }
+        aside label {
+            display: block;
+            padding: 10px;
+            background-color: #EEE;
+            border-style: solid;
+            border-color: #555;
+            border-width: 1px;
+        }
+        aside label:hover {
+            background-color: #DDD;
+        }
+        .api-endpoints {
+            display: none;
+        }
+        {% for i, _ in apis %}
+            #radiobutton{{ i }}:checked ~ #endpoints{{ i }} {
+                display: inherit;
+            }
+        {% endfor %}
     </style>
 </head>
 <body>
@@ -77,6 +108,35 @@
         </label></p>
     </div>
 </div></form>
+
+<aside class="flex-vertical">
+    <h1>Api Type:</h1>
+    {% for i, api in apis %}
+        <input type="radio" name="apiType" id="radiobutton{{ i }}">
+        <label for="radiobutton{{ i }}">{{ api.name }}</label>
+    {% endfor %}
+    <h1>Api Endpoints:</h1>
+    {% for i, api in apis %}
+        <div id="endpoints{{ i }}" class="api-endpoints flex-vertical">
+            {% for endpoint in api.endpoints %}
+                <label onclick="void setEndpoint('{{ endpoint.method }}', '{{ endpoint.name }}');">{{ endpoint.name }}</label>
+            {% endfor %}
+        </div>
+    {% endfor %}
+</aside>
+
+<script>
+    function setEndpoint(method, endpoint) {
+        document.getElementById("method").value = method;
+
+        let url = document.getElementById("url").value;
+        const index = url.lastIndexOf("/");
+        if (index !== -1) {
+            url = url.slice(0, index);
+        }
+        document.getElementById("url").value = url + "/" + endpoint;
+    }
+</script>
 
 {% if response %}
     <h1>{{ status_code }}</h1>
