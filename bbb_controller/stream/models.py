@@ -7,8 +7,6 @@ from children.models import XmppChat, BBBChat, BBBLive, StreamFrontend
 class Stream(models.Model):
     meeting_id = models.CharField(default="", max_length=255)
     rtmp_uri = models.CharField(default="", max_length=255)
-    room_jid = models.CharField(default="", max_length=255)
-    xmpp_chat = models.ForeignKey(XmppChat, on_delete=models.CASCADE)
     bbb_chat = models.ForeignKey(BBBChat, on_delete=models.CASCADE)
     bbb_live = models.ForeignKey(BBBLive, on_delete=models.CASCADE)
     frontend = models.ForeignKey(StreamFrontend, on_delete=models.CASCADE)
@@ -44,5 +42,5 @@ class Stream(models.Model):
 
     def end(self):
         print(self.bbb_chat.end_chat(self.meeting_id).text)
-        print(self.xmpp_chat.end_chat(self.room_jid).text)
+        print(self.frontend.end_chat(self.meeting_id).text)
         print(self.bbb_live.stop_stream(self.meeting_id).text)

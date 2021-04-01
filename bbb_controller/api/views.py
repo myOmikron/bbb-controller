@@ -17,7 +17,6 @@ class StartStream(PostApiPoint):
 
     def safe_post(self, request, parameters, *args, **kwargs):
         meeting_id = parameters["meeting_id"]
-        room_jid = parameters["room_jid"]
 
         if Stream.objects.filter(meeting_id=meeting_id).count() > 0:
             return JsonResponse(
@@ -36,9 +35,6 @@ class StartStream(PostApiPoint):
                 status=404,
                 reason="No matching running meeting found."
             )
-
-        # xmpp chat with least running streams
-        xmpp_chat = XmppChat.objects.annotate(streams=Count("stream")).earliest("streams")
 
         # bbb chat for bbb instance
         bbb_chat = BBBChat.objects.get(bbb=bbb)
@@ -59,10 +55,8 @@ class StartStream(PostApiPoint):
         # new stream to start
         stream = Stream.objects.create(
             meeting_id=meeting_id,
-            room_jid=room_jid,
             rtmp_uri=rtmp_uri,
             frontend=frontend,
-            xmpp_chat=xmpp_chat,
             bbb_chat=bbb_chat,
             bbb_live=bbb_live,
         )
