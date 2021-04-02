@@ -6,7 +6,7 @@ from django.utils.http import urlencode
 from rc_protocol import get_checksum
 
 from bbb_common_api.views import PostApiPoint, GetApiPoint
-from children.models import BBB, BBBChat, XmppChat, BBBLive, StreamFrontend
+from children.models import BBB, BBBChat, BBBLive, StreamFrontend
 from stream.models import Stream
 
 
@@ -16,6 +16,7 @@ class StartStream(PostApiPoint):
     required_parameters = ["meeting_id"]
 
     def safe_post(self, request, parameters, *args, **kwargs):
+        # TODO: implement optional welcome_msg, redirect_url
         meeting_id = parameters["meeting_id"]
 
         if Stream.objects.filter(meeting_id=meeting_id).count() > 0:

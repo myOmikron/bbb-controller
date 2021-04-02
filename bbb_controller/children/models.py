@@ -51,23 +51,6 @@ class BBB(_Child):
         return BigBlueButton(self.url, self.secret)
 
 
-class XmppChat(_Child):
-
-    url = models.CharField(default="", max_length=255)
-    secret = models.CharField(default="", max_length=255)
-
-    def start_chat(self, room_jid, bbb_uri, bbb_secret, meeting_id):
-        return _post(self.url, self.secret, "startChat", {
-            "chat_id": room_jid,
-            "callback_uri": bbb_uri,
-            "callback_secret": bbb_secret,
-            "callback_id": meeting_id,
-        })
-
-    def end_chat(self, chat_id):
-        return _post(self.url, self.secret, "endChat", {"chat_id": chat_id})
-
-
 class BBBChat(_Child):
 
     bbb = models.OneToOneField(BBB, on_delete=models.CASCADE)

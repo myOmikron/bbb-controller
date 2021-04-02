@@ -26,11 +26,6 @@ class BBBLiveAdmin(admin.ModelAdmin):
     list_display = ("__str__", clickable_url)
 
 
-@admin.register(XmppChat)
-class XmppChatAdmin(admin.ModelAdmin):
-    list_display = ("__str__", clickable_url)
-
-
 @admin.register(StreamFrontend)
 class StreamFrontendAdmin(admin.ModelAdmin):
     list_display = ("__str__", clickable_url)

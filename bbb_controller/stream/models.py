@@ -1,7 +1,7 @@
 from django.db import models
 from django.utils.functional import cached_property
 
-from children.models import XmppChat, BBBChat, BBBLive, StreamFrontend
+from children.models import BBBChat, BBBLive, StreamFrontend
 
 
 class Stream(models.Model):
