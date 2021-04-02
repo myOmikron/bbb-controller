@@ -5,7 +5,7 @@ from django.http import JsonResponse, HttpResponseRedirect
 from django.utils.http import urlencode
 from rc_protocol import get_checksum
 
-from bbb_common_api.views import PostApiPoint
+from bbb_common_api.views import PostApiPoint, GetApiPoint
 from children.models import BBB, BBBChat, XmppChat, BBBLive, StreamFrontend
 from stream.models import Stream
 
@@ -68,14 +68,14 @@ class StartStream(PostApiPoint):
         )
 
 
-class JoinStream(PostApiPoint):
+class JoinStream(GetApiPoint):
 
     endpoint = "joinStream"
     required_parameters = ["meeting_id", "user_name"]
 
-    def safe_post(self, request, parameters, *args, **kwargs):
-        meeting_id = parameters["meeting_id"]
-        user_name = parameters["user_name"]
+    def safe_get(self, request, *args, **kwargs):
+        meeting_id = request.GET["meeting_id"]
+        user_name = request.GET["user_name"]
 
         try:
             stream = Stream.objects.get(meeting_id=meeting_id)
