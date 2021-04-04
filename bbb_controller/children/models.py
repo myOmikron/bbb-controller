@@ -1,4 +1,6 @@
 import os
+import logging
+from json import JSONDecodeError
 
 from django.conf import settings
 from django.db import models
@@ -7,20 +9,35 @@ from bigbluebutton_api_python import BigBlueButton
 from django.utils.http import urlencode
 from rc_protocol import get_checksum
 import requests
+from requests import RequestException
+
+request_logger = logging.getLogger("children.requests")
 
 
 def _post(base_url, secret, endpoint, params):
+    url = os.path.join(base_url, endpoint)
     params["checksum"] = get_checksum(params, secret, endpoint)
-    return requests.post(
-        os.path.join(base_url, endpoint),
-        json=params,
-        headers={"user-agent": "bbb-controller"},
-        verify=settings.VERIFY_SSL_CERTS
-    )
+
+    try:
+        response = requests.post(
+            url,
+            json=params,
+            headers={"user-agent": "bbb-controller"},
+            verify=settings.VERIFY_SSL_CERTS
+        )
+    except RequestException as err:
+        request_logger.exception(f"Couldn't request '{url}'")
+        return {"success": False, "message": f"The request failed with an '{repr(err)}'. "
+                                             "See the log for full traceback."}
+
+    try:
+        return response.json()
+    except JSONDecodeError:
+        return {"success": False, "message": f"The response from {url} wasn't json. "
+                                             f"Got '{response.status_code}: {response.reason}' instead."}
 
 
 class _Child(models.Model):
-
     url: str
     secret: str
 
@@ -42,7 +59,6 @@ class _Child(models.Model):
 
 
 class BBB(_Child):
-
     url = models.CharField(default="", max_length=255)
     secret = models.CharField(default="", max_length=255)
 
@@ -52,7 +68,6 @@ class BBB(_Child):
 
 
 class BBBChat(_Child):
-
     bbb = models.OneToOneField(BBB, on_delete=models.CASCADE)
     secret = models.CharField(default="", max_length=255)
 
@@ -77,7 +92,6 @@ class BBBChat(_Child):
 
 
 class BBBLive(_Child):
-
     url = models.CharField(default="", max_length=255)
     secret = models.CharField(default="", max_length=255)
 
@@ -95,7 +109,6 @@ class BBBLive(_Child):
 
 
 class StreamFrontend(_Child):
-
     url = models.CharField(default="", max_length=255)
     secret = models.CharField(default="", max_length=255)
 
