@@ -144,7 +144,7 @@ class JoinStream(GetApiPoint):
         get["checksum"] = get_checksum(get, stream.frontend.secret, "join")
 
         return HttpResponseRedirect(
-            os.path.join(stream.frontend.url, "/api/v1/join?") + urlencode(get)
+            os.path.join(stream.frontend.url, "api/v1/join?") + urlencode(get)
         )
 
 
