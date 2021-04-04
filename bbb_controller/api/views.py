@@ -62,7 +62,24 @@ class StartStream(PostApiPoint):
             bbb_live=bbb_live,
         )
 
-        stream.start()
+        stream.bbb_chat.start_chat(
+            meeting_id,
+            "Stream",
+            frontend.api_url,
+            frontend.secret
+        )
+
+        stream.frontend.start_chat(
+            meeting_id,
+            bbb_chat.url,
+            bbb_chat.secret
+        )
+
+        stream.bbb_live.start_stream(
+            rtmp_uri,
+            meeting_id,
+            stream.meeting_password
+        )
 
         return JsonResponse(
             {"success": True, "message": "Stream started successfully."}
@@ -115,7 +132,9 @@ class EndStream(PostApiPoint):
                 reason="There is no stream running for this meeting"
             )
 
-        stream.end()
+        stream.bbb_chat.end_chat(stream.meeting_id)
+        stream.frontend.end_chat(stream.meeting_id)
+        stream.bbb_live.stop_stream(stream.meeting_id)
         stream.frontend.close_channel(stream.meeting_id)
         stream.delete()
 

@@ -18,29 +18,3 @@ class Stream(models.Model):
     @cached_property
     def meeting_password(self):
         return str(self.bbb_chat.bbb.api.get_meeting_info(self.meeting_id)["xml"]["attendeePW"])
-
-    def start(self):
-        print(self.bbb_chat.start_chat(
-            self.meeting_id,
-            "Stream",
-            self.frontend.api_url,
-            self.frontend.secret,
-            self.meeting_id
-        ).text)
-
-        print(self.frontend.start_chat(
-            self.meeting_id,
-            self.bbb_chat.url,
-            self.bbb_chat.secret
-        ).text)
-
-        print(self.bbb_live.start_stream(
-            self.rtmp_uri,
-            self.meeting_id,
-            self.meeting_password
-        ).text)
-
-    def end(self):
-        print(self.bbb_chat.end_chat(self.meeting_id).text)
-        print(self.frontend.end_chat(self.meeting_id).text)
-        print(self.bbb_live.stop_stream(self.meeting_id).text)

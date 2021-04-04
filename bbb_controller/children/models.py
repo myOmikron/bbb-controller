@@ -63,13 +63,13 @@ class BBBChat(_Child):
             url = os.path.dirname(url)
         return url + "/api/chat"
 
-    def start_chat(self, meeting_id, chat_user, xmpp_uri, xmpp_secret, room_jid):
+    def start_chat(self, meeting_id, chat_user, frontend_uri="", frontend_secret=""):
         return _post(self.url, self.secret, "startChat", {
             "chat_id": meeting_id,
             "chat_user": chat_user,
-            "callback_uri": xmpp_uri,
-            "callback_secret": xmpp_secret,
-            "callback_id": room_jid,
+            "callback_uri": frontend_uri,
+            "callback_secret": frontend_secret,
+            "callback_id": meeting_id,
         })
 
     def end_chat(self, meeting_id):
