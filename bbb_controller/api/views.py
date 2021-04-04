@@ -10,6 +10,15 @@ from children.models import BBB, BBBChat, BBBLive, StreamFrontend
 from stream.models import Stream
 
 
+def _forward_response(name: str, response: dict, status=500):
+    msg = f"Couldn't start '{name}': {response['message']}"
+    return JsonResponse(
+        {"success": False, "message": msg},
+        status=status,
+        reason=msg
+    )
+
+
 class StartStream(PostApiPoint):
 
     endpoint = "startStream"
@@ -37,23 +46,29 @@ class StartStream(PostApiPoint):
                 reason="No matching running meeting found."
             )
 
-        # bbb chat for bbb instance
+        # Get bbb-chat for bbb instance
         bbb_chat = BBBChat.objects.get(bbb=bbb)
 
-        # bbb live with least running streams
+        # Get bbb-live with least running streams
         bbb_live = BBBLive.objects.annotate(streams=Count("stream")).earliest("streams")
 
-        # frontend with least running streams
+        # Get frontend with least running streams
         frontend = StreamFrontend.objects.annotate(streams=Count("stream")).earliest("streams")
 
-        _key = frontend.open_channel(meeting_id).json()["content"]["streaming_key"]
+        # Open frontend's channel
+        response = frontend.open_channel(meeting_id)
+        if not response["success"]:
+            return _forward_response("streaming channel", response)
+
+        # Generate rtmp uri from streaming key and frontend url
+        _key = response["content"]["streaming_key"]
         rtmp_uri = os.path.join(frontend.url, "stream", _key)
         _replace = "http"
         if rtmp_uri.startswith("https"):
             _replace = "https"
         rtmp_uri = rtmp_uri.replace(_replace, "rtmp")
 
-        # new stream to start
+        # Register stream in db
         stream = Stream.objects.create(
             meeting_id=meeting_id,
             rtmp_uri=rtmp_uri,
@@ -62,25 +77,41 @@ class StartStream(PostApiPoint):
             bbb_live=bbb_live,
         )
 
-        stream.bbb_chat.start_chat(
+        # Start bbb-chat
+        response = stream.bbb_chat.start_chat(
             meeting_id,
             "Stream",
             frontend.api_url,
             frontend.secret
         )
+        if not response["success"]:
+            frontend.close_channel(meeting_id)
+            return _forward_response("bbb-chat", response)
 
-        stream.frontend.start_chat(
+        # Start frontend's chat
+        response = stream.frontend.start_chat(
             meeting_id,
             bbb_chat.url,
             bbb_chat.secret
         )
+        if not response["success"]:
+            bbb_chat.end_chat(meeting_id)
+            frontend.close_channel(meeting_id)
+            return _forward_response("frontend-chat", response)
 
-        stream.bbb_live.start_stream(
+        # Start bbb-live
+        response = stream.bbb_live.start_stream(
             rtmp_uri,
             meeting_id,
             stream.meeting_password
         )
+        if not response["success"]:
+            frontend.end_chat(meeting_id)
+            bbb_chat.end_chat(meeting_id)
+            frontend.close_channel(meeting_id)
+            return _forward_response("bbb-live", response)
 
+        # Report success
         return JsonResponse(
             {"success": True, "message": "Stream started successfully."}
         )
