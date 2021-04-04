@@ -66,6 +66,12 @@ class BBB(_Child):
     def api(self):
         return BigBlueButton(self.url, self.secret)
 
+    def get_absolute_url(self):
+        return "https://mconf.github.io/api-mate/" + urlencode({
+            "server": self.url,
+            "sharedSecret": self.secret
+        })
+
 
 class BBBChat(_Child):
     bbb = models.OneToOneField(BBB, on_delete=models.CASCADE)
