@@ -129,10 +129,14 @@ class StreamFrontend(_Child):
             "chat_id": meeting_id
         })
 
-    def open_channel(self, meeting_id):
-        return _post(self.api_url, self.secret, "openChannel", {
-            "meeting_id": meeting_id,
-        })
+    def open_channel(self, meeting_id, welcome_msg=None, redirect_url=None, **kwargs):
+        params = {"meeting_id": meeting_id}
+        if welcome_msg:
+            params["welcome_msg"] = welcome_msg
+        if redirect_url:
+            params["redirect_url"] = redirect_url
+
+        return _post(self.api_url, self.secret, "openChannel", params)
 
     def close_channel(self, meeting_id):
         return _post(self.api_url, self.secret, "closeChannel", {

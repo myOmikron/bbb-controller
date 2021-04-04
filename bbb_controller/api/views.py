@@ -25,7 +25,6 @@ class StartStream(PostApiPoint):
     required_parameters = ["meeting_id"]
 
     def safe_post(self, request, parameters, *args, **kwargs):
-        # TODO: implement optional welcome_msg, redirect_url
         meeting_id = parameters["meeting_id"]
 
         if Stream.objects.filter(meeting_id=meeting_id).count() > 0:
@@ -56,7 +55,7 @@ class StartStream(PostApiPoint):
         frontend = StreamFrontend.objects.annotate(streams=Count("stream")).earliest("streams")
 
         # Open frontend's channel
-        response = frontend.open_channel(meeting_id)
+        response = frontend.open_channel(meeting_id, **parameters)
         if not response["success"]:
             return _forward_response("streaming channel", response)
 
