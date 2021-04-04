@@ -55,7 +55,7 @@ class StartStream(PostApiPoint):
         frontend = StreamFrontend.objects.annotate(streams=Count("stream")).earliest("streams")
 
         # Open frontend's channel
-        response = frontend.open_channel(meeting_id, **parameters)
+        response = frontend.open_channel(**parameters)
         if not response["success"]:
             return _forward_response("streaming channel", response)
 
@@ -84,6 +84,7 @@ class StartStream(PostApiPoint):
             frontend.secret
         )
         if not response["success"]:
+            stream.delete()
             frontend.close_channel(meeting_id)
             return _forward_response("bbb-chat", response)
 
@@ -95,6 +96,7 @@ class StartStream(PostApiPoint):
         )
         if not response["success"]:
             bbb_chat.end_chat(meeting_id)
+            stream.delete()
             frontend.close_channel(meeting_id)
             return _forward_response("frontend-chat", response)
 
@@ -107,6 +109,7 @@ class StartStream(PostApiPoint):
         if not response["success"]:
             frontend.end_chat(meeting_id)
             bbb_chat.end_chat(meeting_id)
+            stream.delete()
             frontend.close_channel(meeting_id)
             return _forward_response("bbb-live", response)
 
