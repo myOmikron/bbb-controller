@@ -1,8 +1,10 @@
+import json
 import os
 
 from django.db.models import Count
 from django.http import JsonResponse, HttpResponseRedirect
 from django.utils.http import urlencode
+from django.views import View
 from rc_protocol import get_checksum
 
 from bbb_common_api.views import PostApiPoint, GetApiPoint
@@ -166,6 +168,61 @@ class EndStream(PostApiPoint):
                 reason="There is no stream running for this meeting"
             )
 
+        stream.bbb_chat.end_chat(stream.meeting_id)
+        stream.frontend.end_chat(stream.meeting_id)
+        stream.bbb_live.stop_stream(stream.meeting_id)
+        stream.frontend.close_channel(stream.meeting_id)
+        stream.delete()
+
+        return JsonResponse(
+            {"success": True, "message": "Stream stopped successfully."}
+        )
+
+
+class BBBObserver(View):
+
+    def post(self, request, *args, **kwargs):
+        """
+        parameters = {
+            'header': {
+                'name': 'MeetingEndingEvtMsg',
+                'meetingId': '[internalMeetingId]',
+                'userId': 'not-used'
+            },
+            'body': {
+                'meetingId': '[internalMeetingId]',
+                'reason': 'ENDED_FROM_API'
+            }
+        }
+        """
+        # Decode json
+        try:
+            parameters = json.loads(request.body)
+        except json.decoder.JSONDecodeError:
+            return JsonResponse(
+                {"success": False, "message": "Decoding data failed"},
+                status=400,
+                reason="Decoding data failed"
+            )
+
+        if parameters["header"]["name"] != "MeetingEndingEvtMsg":
+            return JsonResponse(
+                {"success": False, "message": "Uninteresting event"},
+                status=400,
+                reason="Uninteresting event"
+            )
+
+        # Get stream for meeting
+        try:
+            stream = Stream.objects.get(internal_meeting_id=parameters["header"]["meetingId"])
+        except Stream.DoesNotExist:
+            return JsonResponse(
+                {"success": True, "message": "This meeting had no stream."},
+                status=304,
+                reason="This meeting had no stream."
+            )
+
+        # Stop stream
         stream.bbb_chat.end_chat(stream.meeting_id)
         stream.frontend.end_chat(stream.meeting_id)
         stream.bbb_live.stop_stream(stream.meeting_id)
