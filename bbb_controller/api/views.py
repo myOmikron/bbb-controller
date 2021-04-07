@@ -1,10 +1,8 @@
-import json
 import os
 
 from django.db.models import Count
 from django.http import JsonResponse, HttpResponseRedirect
 from django.utils.http import urlencode
-from django.views import View
 from rc_protocol import get_checksum
 
 from bbb_common_api.views import PostApiPoint, GetApiPoint
@@ -179,9 +177,12 @@ class EndStream(PostApiPoint):
         )
 
 
-class BBBObserver(View):
+class BBBObserver(PostApiPoint):
 
-    def post(self, request, *args, **kwargs):
+    endpoint = "bbbObserver"
+    required_parameters = ["header", "body"]
+
+    def safe_post(self, request, parameters, *args, **kwargs):
         """
         parameters = {
             'header': {
@@ -195,16 +196,6 @@ class BBBObserver(View):
             }
         }
         """
-        # Decode json
-        try:
-            parameters = json.loads(request.body)
-        except json.decoder.JSONDecodeError:
-            return JsonResponse(
-                {"success": False, "message": "Decoding data failed"},
-                status=400,
-                reason="Decoding data failed"
-            )
-
         if parameters["header"]["name"] != "MeetingEndingEvtMsg":
             return JsonResponse(
                 {"success": False, "message": "Uninteresting event"},
