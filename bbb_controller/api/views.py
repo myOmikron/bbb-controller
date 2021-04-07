@@ -1,3 +1,4 @@
+import json
 import os
 
 from django.db.models import Count
@@ -180,11 +181,11 @@ class EndStream(PostApiPoint):
 class BBBObserver(PostApiPoint):
 
     endpoint = "bbbObserver"
-    required_parameters = ["header", "body"]
+    required_parameters = ["event"]
 
     def safe_post(self, request, parameters, *args, **kwargs):
         """
-        parameters = {
+        'event': {
             'header': {
                 'name': 'MeetingEndingEvtMsg',
                 'meetingId': '[internalMeetingId]',
@@ -196,7 +197,11 @@ class BBBObserver(PostApiPoint):
             }
         }
         """
-        if parameters["header"]["name"] != "MeetingEndingEvtMsg":
+        event = json.loads(parameters["event"])
+        header = event["header"]
+        body = event["body"]
+
+        if header["name"] != "MeetingEndingEvtMsg":
             return JsonResponse(
                 {"success": False, "message": "Uninteresting event"},
                 status=400,
@@ -205,7 +210,7 @@ class BBBObserver(PostApiPoint):
 
         # Get stream for meeting
         try:
-            stream = Stream.objects.get(internal_meeting_id=parameters["header"]["meetingId"])
+            stream = Stream.objects.get(internal_meeting_id=header["meetingId"])
         except Stream.DoesNotExist:
             return JsonResponse(
                 {"success": True, "message": "This meeting had no stream."},
