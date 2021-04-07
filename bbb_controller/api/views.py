@@ -70,6 +70,7 @@ class StartStream(PostApiPoint):
         # Register stream in db
         stream = Stream.objects.create(
             meeting_id=meeting_id,
+            internal_meeting_id=str(bbb.api.get_meeting_info(meeting_id)["xml"]["internalMeetingID"]),
             rtmp_uri=rtmp_uri,
             frontend=frontend,
             bbb_chat=bbb_chat,
