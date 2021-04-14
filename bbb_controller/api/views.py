@@ -127,7 +127,7 @@ class StartStream(PostApiPoint):
 
         # Start bbb-live
         response = channel.bbb_live.start_stream(
-            channel.frontend.rtmp_uri,
+            channel.rtmp_uri,
             meeting_id,
             channel.meeting_password
         )
