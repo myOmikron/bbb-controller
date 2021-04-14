@@ -4,18 +4,14 @@ from django.utils.functional import cached_property
 from children.models import BBBChat, BBBLive, StreamFrontend
 
 
-class Stream(models.Model):
+class Channel(models.Model):
     meeting_id = models.CharField(default="", max_length=255)
-    internal_meeting_id = models.CharField(default="", max_length=255)
     rtmp_uri = models.CharField(default="", max_length=255)
-    bbb_chat = models.ForeignKey(BBBChat, on_delete=models.CASCADE)
-    bbb_live = models.ForeignKey(BBBLive, on_delete=models.CASCADE)
     frontend = models.ForeignKey(StreamFrontend, on_delete=models.CASCADE)
 
-    class Meta:
-        # Only one meeting id per bbb cluster per time
-        unique_together = (("meeting_id", "bbb_chat"),
-                           ("internal_meeting_id", "bbb_chat"))
+    internal_meeting_id = models.CharField(default="", max_length=255, blank=True)
+    bbb_chat = models.ForeignKey(BBBChat, on_delete=models.CASCADE, null=True, blank=True)
+    bbb_live = models.ForeignKey(BBBLive, on_delete=models.CASCADE, null=True, blank=True)
 
     @cached_property
     def meeting_password(self):

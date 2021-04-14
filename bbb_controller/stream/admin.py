@@ -1,8 +1,8 @@
 from django.contrib import admin
 
-from stream.models import Stream
+from stream.models import Channel
 
 
-@admin.register(Stream)
-class StreamAdmin(admin.ModelAdmin):
+@admin.register(Channel)
+class ChannelAdmin(admin.ModelAdmin):
     pass
