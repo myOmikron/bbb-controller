@@ -8,7 +8,7 @@ from rc_protocol import get_checksum
 
 from bbb_common_api.views import PostApiPoint, GetApiPoint
 from children.models import BBB, BBBChat, BBBLive, StreamFrontend
-from stream.models import Channel
+from api.models import Channel
 
 
 def _forward_response(name: str, response: dict, status=500):
