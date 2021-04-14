@@ -26,7 +26,8 @@ class Api:
 
 apis = list(enumerate([
     Api("Controller",
-        [Endpoint("post", "startStream"),
+        [Endpoint("post", "openChannel"),
+         Endpoint("post", "startStream"),
          Endpoint("get",  "joinStream"),
          Endpoint("post", "endStream")]),
     Api("Streaming Frontend",

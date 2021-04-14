@@ -8,7 +8,7 @@ from rc_protocol import get_checksum
 
 from bbb_common_api.views import PostApiPoint, GetApiPoint
 from children.models import BBB, BBBChat, BBBLive, StreamFrontend
-from stream.models import Stream
+from api.models import Channel
 
 
 def _forward_response(name: str, response: dict, status=500):
@@ -20,6 +20,52 @@ def _forward_response(name: str, response: dict, status=500):
     )
 
 
+class OpenChannel(PostApiPoint):
+
+    endpoint = "openChannel"
+    required_parameters = ["meeting_id"]
+
+    def safe_post(self, request, parameters, *args, **kwargs):
+        meeting_id = parameters["meeting_id"]
+
+        if Channel.objects.filter(meeting_id=meeting_id).count() > 0:
+            return JsonResponse(
+                {"success": False, "message": "The channel has already been opened."},
+                status=304,
+                reason="The channel has already been opened."
+            )
+
+        # Get frontend with least running streams
+        frontend = StreamFrontend.objects.annotate(channels=Count("channel")).earliest("channels")
+
+        # Open frontend's channel
+        response = frontend.open_channel(**parameters)
+        if not response["success"]:
+            return _forward_response("streaming channel", response)
+
+        # Generate rtmp uri from streaming key and frontend url
+        _key = response["content"]["streaming_key"]
+        rtmp_uri = os.path.join(frontend.url, "stream", _key)
+        _replace = "http"
+        if rtmp_uri.startswith("https"):
+            _replace = "https"
+        rtmp_uri = rtmp_uri.replace(_replace, "rtmp")
+
+        # Register channel in db
+        Channel.objects.create(
+            meeting_id=meeting_id,
+            rtmp_uri=rtmp_uri,
+            frontend=frontend,
+            internal_meeting_id="",
+            bbb_chat=None,
+            bbb_live=None,
+        )
+
+        return JsonResponse(
+            {"success": True, "message": "Channel opened."}
+        )
+
+
 class StartStream(PostApiPoint):
 
     endpoint = "startStream"
@@ -28,12 +74,13 @@ class StartStream(PostApiPoint):
     def safe_post(self, request, parameters, *args, **kwargs):
         meeting_id = parameters["meeting_id"]
 
-        if Stream.objects.filter(meeting_id=meeting_id).count() > 0:
+        if Channel.objects.filter(meeting_id=meeting_id).count() == 0:
             return JsonResponse(
-                {"success": False, "message": "There is already a stream running"},
-                status=304,
-                reason="There is already a stream running"
+                {"success": False, "message": "There is no channel for this meeting"},
+                status=404,
+                reason="There is no channel for this meeting"
             )
+        channel = Channel.objects.filter(meeting_id=meeting_id).last()
 
         # Search in bbb instances for meeting id
         for bbb in BBB.objects.all():
@@ -50,69 +97,43 @@ class StartStream(PostApiPoint):
         bbb_chat = BBBChat.objects.get(bbb=bbb)
 
         # Get bbb-live with least running streams
-        bbb_live = BBBLive.objects.annotate(streams=Count("stream")).earliest("streams")
+        bbb_live = BBBLive.objects.annotate(channels=Count("channel")).earliest("channels")
 
-        # Get frontend with least running streams
-        frontend = StreamFrontend.objects.annotate(streams=Count("stream")).earliest("streams")
-
-        # Open frontend's channel
-        response = frontend.open_channel(**parameters)
-        if not response["success"]:
-            return _forward_response("streaming channel", response)
-
-        # Generate rtmp uri from streaming key and frontend url
-        _key = response["content"]["streaming_key"]
-        rtmp_uri = os.path.join(frontend.url, "stream", _key)
-        _replace = "http"
-        if rtmp_uri.startswith("https"):
-            _replace = "https"
-        rtmp_uri = rtmp_uri.replace(_replace, "rtmp")
-
-        # Register stream in db
-        stream = Stream.objects.create(
-            meeting_id=meeting_id,
-            internal_meeting_id=str(bbb.api.get_meeting_info(meeting_id)["xml"]["internalMeetingID"]),
-            rtmp_uri=rtmp_uri,
-            frontend=frontend,
-            bbb_chat=bbb_chat,
-            bbb_live=bbb_live,
-        )
+        # Update channel with bbb and streamer
+        channel.internal_meeting_id = str(bbb.api.get_meeting_info(meeting_id)["xml"]["internalMeetingID"])
+        channel.bbb_chat = bbb_chat
+        channel.bbb_live = bbb_live
+        channel.save()
 
         # Start bbb-chat
-        response = stream.bbb_chat.start_chat(
+        response = channel.bbb_chat.start_chat(
             meeting_id,
             "Stream",
-            frontend.api_url,
-            frontend.secret
+            channel.frontend.api_url,
+            channel.frontend.secret
         )
         if not response["success"]:
-            stream.delete()
-            frontend.close_channel(meeting_id)
             return _forward_response("bbb-chat", response)
 
         # Start frontend's chat
-        response = stream.frontend.start_chat(
+        response = channel.frontend.start_chat(
             meeting_id,
             bbb_chat.url,
             bbb_chat.secret
         )
         if not response["success"]:
             bbb_chat.end_chat(meeting_id)
-            stream.delete()
-            frontend.close_channel(meeting_id)
             return _forward_response("frontend-chat", response)
 
         # Start bbb-live
-        response = stream.bbb_live.start_stream(
-            rtmp_uri,
+        response = channel.bbb_live.start_stream(
+            channel.rtmp_uri,
             meeting_id,
-            stream.meeting_password
+            channel.meeting_password
         )
         if not response["success"]:
-            frontend.end_chat(meeting_id)
+            channel.frontend.end_chat(meeting_id)
             bbb_chat.end_chat(meeting_id)
-            stream.delete()
-            frontend.close_channel(meeting_id)
             return _forward_response("bbb-live", response)
 
         # Report success
@@ -131,22 +152,22 @@ class JoinStream(GetApiPoint):
         user_name = request.GET["user_name"]
 
         try:
-            stream = Stream.objects.get(meeting_id=meeting_id)
-        except Stream.DoesNotExist:
+            channel = Channel.objects.get(meeting_id=meeting_id)
+        except Channel.DoesNotExist:
             return JsonResponse(
-                {"success": False, "message": "There is no stream running for this meeting"},
+                {"success": False, "message": "No channel was opened for this meeting"},
                 status=404,
-                reason="There is no stream running for this meeting"
+                reason="No channel was opened for this meeting"
             )
 
         get = {
             "meeting_id": meeting_id,
             "user_name": user_name,
         }
-        get["checksum"] = get_checksum(get, stream.frontend.secret, "join")
+        get["checksum"] = get_checksum(get, channel.frontend.secret, "join")
 
         return HttpResponseRedirect(
-            os.path.join(stream.frontend.url, "api/v1/join?") + urlencode(get)
+            os.path.join(channel.frontend.url, "api/v1/join?") + urlencode(get)
         )
 
 
@@ -159,19 +180,21 @@ class EndStream(PostApiPoint):
         meeting_id = parameters["meeting_id"]
 
         try:
-            stream = Stream.objects.get(meeting_id=meeting_id)
-        except Stream.DoesNotExist:
+            channel = Channel.objects.get(meeting_id=meeting_id)
+        except Channel.DoesNotExist:
             return JsonResponse(
-                {"success": False, "message": "There is no stream running for this meeting"},
+                {"success": False, "message": "No channel was opened for this meeting"},
                 status=404,
-                reason="There is no stream running for this meeting"
+                reason="No channel was opened for this meeting"
             )
 
-        stream.bbb_chat.end_chat(stream.meeting_id)
-        stream.frontend.end_chat(stream.meeting_id)
-        stream.bbb_live.stop_stream(stream.meeting_id)
-        stream.frontend.close_channel(stream.meeting_id)
-        stream.delete()
+        if channel.bbb_chat:
+            channel.bbb_chat.end_chat(channel.meeting_id)
+        if channel.bbb_live:
+            channel.bbb_live.stop_stream(channel.meeting_id)
+        channel.frontend.end_chat(channel.meeting_id)
+        channel.frontend.close_channel(channel.meeting_id)
+        channel.delete()
 
         return JsonResponse(
             {"success": True, "message": "Stream stopped successfully."}
@@ -210,8 +233,8 @@ class BBBObserver(PostApiPoint):
 
         # Get stream for meeting
         try:
-            stream = Stream.objects.get(internal_meeting_id=header["meetingId"])
-        except Stream.DoesNotExist:
+            channel = Channel.objects.get(internal_meeting_id=header["meetingId"])
+        except Channel.DoesNotExist:
             return JsonResponse(
                 {"success": True, "message": "This meeting had no stream."},
                 status=304,
@@ -219,11 +242,11 @@ class BBBObserver(PostApiPoint):
             )
 
         # Stop stream
-        stream.bbb_chat.end_chat(stream.meeting_id)
-        stream.frontend.end_chat(stream.meeting_id)
-        stream.bbb_live.stop_stream(stream.meeting_id)
-        stream.frontend.close_channel(stream.meeting_id)
-        stream.delete()
+        channel.bbb_chat.end_chat(channel.meeting_id)
+        channel.frontend.end_chat(channel.meeting_id)
+        channel.bbb_live.stop_stream(channel.meeting_id)
+        channel.frontend.close_channel(channel.meeting_id)
+        channel.delete()
 
         return JsonResponse(
             {"success": True, "message": "Stream stopped successfully."}
