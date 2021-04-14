@@ -188,9 +188,11 @@ class EndStream(PostApiPoint):
                 reason="No channel was opened for this meeting"
             )
 
-        channel.bbb_chat.end_chat(channel.meeting_id)
+        if channel.bbb_chat:
+            channel.bbb_chat.end_chat(channel.meeting_id)
+        if channel.bbb_live:
+            channel.bbb_live.stop_stream(channel.meeting_id)
         channel.frontend.end_chat(channel.meeting_id)
-        channel.bbb_live.stop_stream(channel.meeting_id)
         channel.frontend.close_channel(channel.meeting_id)
         channel.delete()
 
