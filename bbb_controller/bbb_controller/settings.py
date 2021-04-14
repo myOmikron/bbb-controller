@@ -125,9 +125,6 @@ USE_TZ = True
 
 STATIC_URL = '/static/'
 STATIC_ROOT = "/var/www/static"
-STATICFILES_DIRS = [
-    BASE_DIR / "static",
-]
 
 SHARED_SECRET = "change_me"
 SHARED_SECRET_TIME_DELTA = 5
