@@ -33,9 +33,21 @@ Status code         | Message                                     | Cause
 
 ### External Endpoints
 
+#### `openChannel`
+
+This method opens a channel in our frontend. Users are now able to join the channel and use the chat. The stream is started with the `startStream` endpoint.
+
+- Method: `POST`
+
+Parameters      | Required | Type | Description
+----------------|----------|------|------------
+meeting_id      | Yes      | str  | The id of the bigbluebutton meeting. The meeting can be started afterwards.
+welcome_msg     | No       | str  | A welcome message that gets displayed on the chat window when the participants join. 
+redirect_url    | No       | str  | An url to redirect the users to, once the stream ended.
+
 #### `startStream`
 
-This method starts a stream for a running bigbluebutton meeting.
+This method starts a stream for a running bigbluebutton meeting. There has to be an open channel with the `meeting_id` specified.
 
 The starting process may take a minute, but since this project only forwards commands to others, this method will respond before the stream is actually running.
 
@@ -43,9 +55,7 @@ The starting process may take a minute, but since this project only forwards com
 
 Parameters      | Required | Type | Description
 ----------------|----------|------|------------
-meeting_id      | Yes      | str  | The id of a running bigbluebutton meeting.
-welcome_msg     | No       | str  | A welcome message that gets displayed on the chat window when the participant joins.
-redirect_url    | No       | str  | An url to redirect the users to, once the stream ended.
+meeting_id      | Yes      | str  | The id of the bigbluebutton meeting. The meeting has to be started.
 
 Status code          | Message                                     | Cause
 ---------------------|---------------------------------------------|----------------------------------------------
