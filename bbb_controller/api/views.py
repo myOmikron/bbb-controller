@@ -188,17 +188,46 @@ class EndStream(PostApiPoint):
                 reason="No channel was opened for this meeting"
             )
 
+        errors = []
         if channel.bbb_chat:
-            channel.bbb_chat.end_chat(channel.meeting_id)
+            response = channel.bbb_chat.end_chat(channel.meeting_id)
+            if not response["success"]:
+                errors.append(("bbb-chat", response))
+
         if channel.bbb_live:
-            channel.bbb_live.stop_stream(channel.meeting_id)
-        channel.frontend.end_chat(channel.meeting_id)
-        channel.frontend.close_channel(channel.meeting_id)
+            response = channel.bbb_live.stop_stream(channel.meeting_id)
+            if not response["success"]:
+                errors.append(("bbb-live", response))
+
+        response = channel.frontend.end_chat(channel.meeting_id)
+        if not response["success"]:
+            errors.append(("frontend-chat", response))
+
+        response = channel.frontend.close_channel(channel.meeting_id)
+        if not response["success"]:
+            errors.append(("streaming channel", response))
+
         channel.delete()
 
-        return JsonResponse(
-            {"success": True, "message": "Stream stopped successfully."}
-        )
+        if errors:
+            for i, error in enumerate(errors):
+                component, response = error
+                errors[i] = f"'{component}': {response['message']}"
+
+            if len(errors) == 1:
+                error_msg = f"Couldn't stop '{errors[0]}'"
+            else:
+                error_msg = "Multiple components couldn't stop. See 'errors' list."
+
+            return JsonResponse(
+                {"success": True, "message": error_msg, "errors": errors},
+                status=500,
+                reason=error_msg
+            )
+        else:
+            return JsonResponse(
+                {"success": True, "message": "Stream stopped successfully."}
+            )
 
 
 class BBBObserver(PostApiPoint):
