@@ -7,7 +7,7 @@ from children.models import BBBChat, BBBLive, StreamFrontend
 class Channel(models.Model):
     meeting_id = models.CharField(default="", max_length=255)
     rtmp_uri = models.CharField(default="", max_length=255)
-    frontend = models.ForeignKey(StreamFrontend, on_delete=models.CASCADE)
+    frontends = models.ManyToManyField(StreamFrontend)
 
     internal_meeting_id = models.CharField(default="", max_length=255, blank=True)
     bbb_chat = models.ForeignKey(BBBChat, on_delete=models.CASCADE, null=True, blank=True)

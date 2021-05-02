@@ -111,7 +111,7 @@ class BBBLive(_Child):
         })
 
 
-class StreamFrontend(_Child):
+class StreamEdge(_Child):
     url = models.CharField(default="", max_length=255)
     secret = models.CharField(default="", max_length=255)
 
@@ -119,18 +119,24 @@ class StreamFrontend(_Child):
     def api_url(self):
         return os.path.join(self.url, "api", "v1")
 
-    def start_chat(self, meeting_id, bbb_uri="", bbb_secret=""):
-        return _post(self.api_url, self.secret, "startChat", {
-            "chat_id": meeting_id,
-            "callback_uri": bbb_uri,
-            "callback_secret": bbb_secret,
-            "callback_id": meeting_id,
+    def open_channel(self, meeting_id):
+        return _post(self.api_url, self.secret, "openChannel", {
+            "meeting_id": meeting_id,
         })
 
-    def end_chat(self, meeting_id):
-        return _post(self.api_url, self.secret, "endChat", {
-            "chat_id": meeting_id
+    def close_channel(self, meeting_id):
+        return _post(self.api_url, self.secret, "closeChannel", {
+            "meeting_id": meeting_id,
         })
+
+
+class StreamFrontend(_Child):
+    url = models.CharField(default="", max_length=255)
+    secret = models.CharField(default="", max_length=255)
+
+    @property
+    def api_url(self):
+        return os.path.join(self.url, "api", "v1")
 
     def open_channel(self, meeting_id, welcome_msg=None, redirect_url=None, **kwargs):
         params = {"meeting_id": meeting_id}
@@ -145,3 +151,23 @@ class StreamFrontend(_Child):
         return _post(self.api_url, self.secret, "closeChannel", {
             "meeting_id": meeting_id,
         })
+
+
+class StreamChat(_Child):
+    url = models.CharField(default="", max_length=255)
+    secret = models.CharField(default="", max_length=255)
+
+    @property
+    def api_url(self):
+        return os.path.join(self.url, "api", "v1")
+
+    def start_chat(self, meeting_id, callback_uri="", callback_secret=""):
+        return _post(self.api_url, self.secret, "startChat", {
+            "chat_id": meeting_id,
+            "callback_uri": callback_uri,
+            "callback_secret": callback_secret,
+            "callback_id": meeting_id,
+        })
+
+    def end_chat(self, meeting_id):
+        return _post(self.api_url, self.secret, "endChat", {"chat_id": meeting_id})

@@ -26,6 +26,16 @@ class BBBLiveAdmin(admin.ModelAdmin):
     list_display = ("__str__", clickable_url)
 
 
+@admin.register(StreamEdge)
+class StreamEdgeAdmin(admin.ModelAdmin):
+    list_display = ("__str__", clickable_url)
+
+
 @admin.register(StreamFrontend)
 class StreamFrontendAdmin(admin.ModelAdmin):
+    list_display = ("__str__", clickable_url)
+
+
+@admin.register(StreamChat)
+class StreamChatAdmin(admin.ModelAdmin):
     list_display = ("__str__", clickable_url)
