@@ -69,7 +69,7 @@ class OpenChannel(PostApiPoint):
             if response["success"]:
                 channel.frontends.add(frontend)
             else:
-                errors.append(frontend.url, response["message"])
+                errors.append((frontend.url, response["message"]))
 
         if errors:
             if len(errors) == 1:
