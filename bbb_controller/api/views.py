@@ -69,11 +69,23 @@ class OpenChannel(PostApiPoint):
             if response["success"]:
                 channel.frontends.add(frontend)
             else:
-                errors.append(response)
+                errors.append(frontend.url, response["message"])
 
-        return JsonResponse(
-            {"success": True, "message": "Channel opened."}
-        )
+        if errors:
+            if len(errors) == 1:
+                error_msg = f"Couldn't open '{errors[0][0]}': {errors[0][1]}"
+            else:
+                error_msg = "Multiple components couldn't stop. See 'errors' list."
+
+            return JsonResponse(
+                {"success": True, "message": error_msg, "errors": [f"'{error[0]}': {error[1]}" for error in errors]},
+                status=500,
+                reason=error_msg
+            )
+        else:
+            return JsonResponse(
+                {"success": True, "message": "Channel opened."}
+            )
 
 
 class StartStream(PostApiPoint):
