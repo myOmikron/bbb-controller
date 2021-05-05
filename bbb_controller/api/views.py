@@ -119,8 +119,8 @@ class StartStream(PostApiPoint):
         response = channel.bbb_chat.start_chat(
             meeting_id,
             "Stream",
-            channel.frontend.api_url,
-            channel.frontend.secret
+            StreamChat.objects.first().api_url,
+            StreamChat.objects.first().secret
         )
         if not response["success"]:
             return _forward_response("bbb-chat", response)
@@ -174,10 +174,12 @@ class JoinStream(GetApiPoint):
             "meeting_id": meeting_id,
             "user_name": user_name,
         }
-        get["checksum"] = get_checksum(get, channel.frontend.secret, "join")
+        # Get frontend with least user
+        frontend = channel.frontends.first()
+        get["checksum"] = get_checksum(get, frontend.secret, "join")
 
         return HttpResponseRedirect(
-            os.path.join(channel.frontend.url, "api/v1/join?") + urlencode(get)
+            os.path.join(frontend.url, "api/v1/join?") + urlencode(get)
         )
 
 
