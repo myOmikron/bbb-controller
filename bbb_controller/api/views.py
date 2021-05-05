@@ -7,7 +7,7 @@ from django.utils.http import urlencode
 from rc_protocol import get_checksum
 
 from bbb_common_api.views import PostApiPoint, GetApiPoint
-from children.models import BBB, BBBChat, BBBLive, StreamFrontend
+from children.models import BBB, BBBChat, BBBLive, StreamFrontend, StreamEdge, StreamChat
 from api.models import Channel
 
 
@@ -36,12 +36,13 @@ class OpenChannel(PostApiPoint):
             )
 
         # Get frontend with least running streams
-        frontend = StreamFrontend.objects.annotate(channels=Count("channel")).earliest("channels")
+        # frontend = StreamFrontend.objects.annotate(channels=Count("channel")).earliest("channels")
+        frontend = StreamEdge.objects.first()
 
         # Open frontend's channel
-        response = frontend.open_channel(**parameters)
+        response = frontend.open_channel(parameters["meeting_id"])
         if not response["success"]:
-            return _forward_response("streaming channel", response)
+            return _forward_response("stream-edge", response)
 
         # Generate rtmp uri from streaming key and frontend url
         _key = response["content"]["streaming_key"]
@@ -52,14 +53,23 @@ class OpenChannel(PostApiPoint):
         rtmp_uri = rtmp_uri.replace(_replace, "rtmp")
 
         # Register channel in db
-        Channel.objects.create(
+        channel = Channel.objects.create(
             meeting_id=meeting_id,
             rtmp_uri=rtmp_uri,
-            frontend=frontend,
             internal_meeting_id="",
             bbb_chat=None,
             bbb_live=None,
         )
+
+        # Signal all frontends to open the channel
+        # TODO: what behaviour is desired, when a frontend breaks?
+        errors = []
+        for frontend in StreamFrontend.objects.all():
+            response = frontend.open_channel(**parameters)
+            if response["success"]:
+                channel.frontends.add(frontend)
+            else:
+                errors.append(response)
 
         return JsonResponse(
             {"success": True, "message": "Channel opened."}
@@ -115,15 +125,15 @@ class StartStream(PostApiPoint):
         if not response["success"]:
             return _forward_response("bbb-chat", response)
 
-        # Start frontend's chat
-        response = channel.frontend.start_chat(
+        # Start stream's chat
+        response = StreamChat.objects.first().start_chat(
             meeting_id,
             bbb_chat.url,
             bbb_chat.secret
         )
         if not response["success"]:
             bbb_chat.end_chat(meeting_id)
-            return _forward_response("frontend-chat", response)
+            return _forward_response("stream-chat", response)
 
         # Start bbb-live
         response = channel.bbb_live.start_stream(
@@ -132,7 +142,7 @@ class StartStream(PostApiPoint):
             channel.meeting_password
         )
         if not response["success"]:
-            channel.frontend.end_chat(meeting_id)
+            StreamChat.objects.first().end_chat(meeting_id)
             bbb_chat.end_chat(meeting_id)
             return _forward_response("bbb-live", response)
 
@@ -199,13 +209,18 @@ class EndStream(PostApiPoint):
             if not response["success"]:
                 errors.append(("bbb-live", response))
 
-        response = channel.frontend.end_chat(channel.meeting_id)
+        response = StreamChat.objects.first().end_chat(channel.meeting_id)
         if not response["success"]:
-            errors.append(("frontend-chat", response))
+            errors.append(("stream-chat", response))
 
-        response = channel.frontend.close_channel(channel.meeting_id)
+        response = StreamEdge.objects.first().close_channel(channel.meeting_id)
         if not response["success"]:
-            errors.append(("streaming channel", response))
+            errors.append(("stream-edge", response))
+
+        for frontend in channel.frontends.all():
+            response = frontend.close_channel(channel.meeting_id)
+            if not response["success"]:
+                errors.append(("stream-frontend", response))
 
         channel.delete()
 
