@@ -30,6 +30,9 @@ def _post(base_url, secret, endpoint, params):
         return {"success": False, "message": f"The request failed with an '{repr(err)}'. "
                                              "See the log for full traceback."}
 
+    if response.status_code == 304:
+        return {"success": True, "message": "Got '304'"}
+
     try:
         return response.json()
     except JSONDecodeError:
