@@ -1,5 +1,6 @@
 import json
 import os
+import time
 
 from django.db.models import Count
 from django.http import JsonResponse, HttpResponseRedirect
@@ -126,6 +127,7 @@ class StartStream(PostApiPoint):
             return _forward_response("frontend-chat", response)
 
         # Start bbb-live
+        time.sleep(0.5)  # TODO remove it if it doesn't fix bbb-chat's chat_user issue
         response = channel.bbb_live.start_stream(
             channel.rtmp_uri,
             meeting_id,
