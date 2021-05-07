@@ -185,6 +185,7 @@ class JoinStream(GetApiPoint):
         # Get frontend with least user and increase counter
         c2f = Channel2Frontend.objects.filter(channel=channel).order_by("viewers").first()
         c2f.viewers = F("viewers") + 1
+        c2f.save()
         frontend = c2f.frontend
 
         get = {
