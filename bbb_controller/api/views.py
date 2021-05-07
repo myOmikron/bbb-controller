@@ -1,14 +1,14 @@
 import json
 import os
 
-from django.db.models import Count
+from django.db.models import Count, F
 from django.http import JsonResponse, HttpResponseRedirect
 from django.utils.http import urlencode
 from rc_protocol import get_checksum
 
 from bbb_common_api.views import PostApiPoint, GetApiPoint
 from children.models import BBB, BBBChat, BBBLive, StreamFrontend, StreamEdge, StreamChat
-from api.models import Channel
+from api.models import Channel, Channel2Frontend
 
 
 def _forward_response(name: str, response: dict, status=500):
@@ -182,14 +182,16 @@ class JoinStream(GetApiPoint):
                 reason="No channel was opened for this meeting"
             )
 
+        # Get frontend with least user and increase counter
+        c2f = Channel2Frontend.objects.filter(channel=channel).order_by("viewers").first()
+        c2f.viewers = F("viewers") + 1
+        frontend = c2f.frontend
+
         get = {
             "meeting_id": meeting_id,
             "user_name": user_name,
         }
-        # Get frontend with least user
-        frontend = channel.frontends.first()
         get["checksum"] = get_checksum(get, frontend.secret, "join")
-
         return HttpResponseRedirect(
             os.path.join(frontend.url, "api/v1/join?") + urlencode(get)
         )
