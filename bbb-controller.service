@@ -1,13 +1,23 @@
 [Unit]
-Description=BBB-Chat Sync service
-After=bbb-web.service
+Description=BBB-Controller service
+Requires=bbb-controller.socket
+After=network.target
+
+[Service]
+Type=notify
+# the specific user that our service will run as
+User=bbb-controller
+Group=bbb-controller
+# another option for an even more restricted service is
+# DynamicUser=yes
+# see http://0pointer.net/blog/dynamic-users-with-systemd.html
+RuntimeDirectory=gunicorn
+WorkingDirectory=/home/bbb-controller/bbb-controller/bbb_controller/
+ExecStart=/home/bbb-controller/bbb-controller/venv/bin/gunicorn -c /etc/bbb-controller/gunicorn.conf.py bbb_controller.wsgi
+ExecReload=/bin/kill -s HUP $MAINPID
+KillMode=mixed
+TimeoutStopSec=5
+PrivateTmp=true
 
 [Install]
 WantedBy=multi-user.target
-
-[Service]
-ExecStart=/home/bbb-controller/bbb-controller/venv/bin/python3 manage.py runserver 127.0.0.1:8005
-User=bbb-controller
-WorkingDirectory=/home/bbb-controller/bbb-controller/bbb_controller/
-Restart=always
-KillSignal=SIGKILL
