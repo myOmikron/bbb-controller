@@ -30,6 +30,9 @@ def _post(base_url, secret, endpoint, params):
         return {"success": False, "message": f"The request failed with an '{repr(err)}'. "
                                              "See the log for full traceback."}
 
+    if response.status_code == 304:
+        return {"success": True, "message": "Got '304'"}
+
     try:
         return response.json()
     except JSONDecodeError:
@@ -98,15 +101,38 @@ class BBBLive(_Child):
     url = models.CharField(default="", max_length=255)
     secret = models.CharField(default="", max_length=255)
 
+    @property
+    def api_url(self):
+        return os.path.join(self.url, "api", "v1")
+
     def start_stream(self, rtmp_uri, meeting_id, meeting_password):
-        return _post(self.url, self.secret, "startStream", {
+        return _post(self.api_url, self.secret, "startStream", {
             "rtmp_uri": rtmp_uri,
             "meeting_id": meeting_id,
             "meeting_password": meeting_password,
         })
 
     def stop_stream(self, meeting_id):
-        return _post(self.url, self.secret, "stopStream", {
+        return _post(self.api_url, self.secret, "stopStream", {
+            "meeting_id": meeting_id,
+        })
+
+
+class StreamEdge(_Child):
+    url = models.CharField(default="", max_length=255)
+    secret = models.CharField(default="", max_length=255)
+
+    @property
+    def api_url(self):
+        return os.path.join(self.url, "api", "v1")
+
+    def open_channel(self, meeting_id):
+        return _post(self.api_url, self.secret, "openChannel", {
+            "meeting_id": meeting_id,
+        })
+
+    def close_channel(self, meeting_id):
+        return _post(self.api_url, self.secret, "closeChannel", {
             "meeting_id": meeting_id,
         })
 
@@ -118,19 +144,6 @@ class StreamFrontend(_Child):
     @property
     def api_url(self):
         return os.path.join(self.url, "api", "v1")
-
-    def start_chat(self, meeting_id, bbb_uri="", bbb_secret=""):
-        return _post(self.api_url, self.secret, "startChat", {
-            "chat_id": meeting_id,
-            "callback_uri": bbb_uri,
-            "callback_secret": bbb_secret,
-            "callback_id": meeting_id,
-        })
-
-    def end_chat(self, meeting_id):
-        return _post(self.api_url, self.secret, "endChat", {
-            "chat_id": meeting_id
-        })
 
     def open_channel(self, meeting_id, welcome_msg=None, redirect_url=None, **kwargs):
         params = {"meeting_id": meeting_id}
@@ -145,3 +158,23 @@ class StreamFrontend(_Child):
         return _post(self.api_url, self.secret, "closeChannel", {
             "meeting_id": meeting_id,
         })
+
+
+class StreamChat(_Child):
+    url = models.CharField(default="", max_length=255)
+    secret = models.CharField(default="", max_length=255)
+
+    @property
+    def api_url(self):
+        return os.path.join(self.url, "api", "v1")
+
+    def start_chat(self, meeting_id, callback_uri="", callback_secret=""):
+        return _post(self.api_url, self.secret, "startChat", {
+            "chat_id": meeting_id,
+            "callback_uri": callback_uri,
+            "callback_secret": callback_secret,
+            "callback_id": meeting_id,
+        })
+
+    def end_chat(self, meeting_id):
+        return _post(self.api_url, self.secret, "endChat", {"chat_id": meeting_id})

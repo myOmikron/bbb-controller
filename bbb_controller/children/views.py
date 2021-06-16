@@ -39,7 +39,7 @@ apis = list(enumerate([
          Endpoint("post", "closeChat")]),
     Api("Streamer",
         [Endpoint("post", "startStream"),
-         Endpoint("post", "endStream")]),
+         Endpoint("post", "stopStream")]),
     Api("BBB Chat",
         [Endpoint("get",  "runningChats"),
          Endpoint("post", "startChat"),

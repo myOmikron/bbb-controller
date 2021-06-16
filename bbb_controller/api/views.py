@@ -2,14 +2,14 @@ import json
 import os
 import time
 
-from django.db.models import Count
+from django.db.models import Count, F
 from django.http import JsonResponse, HttpResponseRedirect
 from django.utils.http import urlencode
 from rc_protocol import get_checksum
 
 from bbb_common_api.views import PostApiPoint, GetApiPoint
-from children.models import BBB, BBBChat, BBBLive, StreamFrontend
-from api.models import Channel
+from children.models import BBB, BBBChat, BBBLive, StreamFrontend, StreamEdge, StreamChat
+from api.models import Channel, Channel2Frontend
 
 
 def _forward_response(name: str, response: dict, status=500):
@@ -37,12 +37,13 @@ class OpenChannel(PostApiPoint):
             )
 
         # Get frontend with least running streams
-        frontend = StreamFrontend.objects.annotate(channels=Count("channel")).earliest("channels")
+        # frontend = StreamFrontend.objects.annotate(channels=Count("channel")).earliest("channels")
+        frontend = StreamEdge.objects.first()
 
         # Open frontend's channel
-        response = frontend.open_channel(**parameters)
+        response = frontend.open_channel(parameters["meeting_id"])
         if not response["success"]:
-            return _forward_response("streaming channel", response)
+            return _forward_response("stream-edge", response)
 
         # Generate rtmp uri from streaming key and frontend url
         _key = response["content"]["streaming_key"]
@@ -53,18 +54,39 @@ class OpenChannel(PostApiPoint):
         rtmp_uri = rtmp_uri.replace(_replace, "rtmp")
 
         # Register channel in db
-        Channel.objects.create(
+        channel = Channel.objects.create(
             meeting_id=meeting_id,
             rtmp_uri=rtmp_uri,
-            frontend=frontend,
             internal_meeting_id="",
             bbb_chat=None,
             bbb_live=None,
         )
 
-        return JsonResponse(
-            {"success": True, "message": "Channel opened."}
-        )
+        # Signal all frontends to open the channel
+        # TODO: what behaviour is desired, when a frontend breaks?
+        errors = []
+        for frontend in StreamFrontend.objects.all():
+            response = frontend.open_channel(**parameters)
+            if response["success"]:
+                channel.frontends.add(frontend)
+            else:
+                errors.append((frontend.url, response["message"]))
+
+        if errors:
+            if len(errors) == 1:
+                error_msg = f"Couldn't open '{errors[0][0]}': {errors[0][1]}"
+            else:
+                error_msg = "Multiple components couldn't stop. See 'errors' list."
+
+            return JsonResponse(
+                {"success": True, "message": error_msg, "errors": [f"'{error[0]}': {error[1]}" for error in errors]},
+                status=500,
+                reason=error_msg
+            )
+        else:
+            return JsonResponse(
+                {"success": True, "message": "Channel opened."}
+            )
 
 
 class StartStream(PostApiPoint):
@@ -110,21 +132,21 @@ class StartStream(PostApiPoint):
         response = channel.bbb_chat.start_chat(
             meeting_id,
             "Stream",
-            channel.frontend.api_url,
-            channel.frontend.secret
+            StreamChat.objects.first().api_url,
+            StreamChat.objects.first().secret
         )
         if not response["success"]:
             return _forward_response("bbb-chat", response)
 
-        # Start frontend's chat
-        response = channel.frontend.start_chat(
+        # Start stream's chat
+        response = StreamChat.objects.first().start_chat(
             meeting_id,
             bbb_chat.url,
             bbb_chat.secret
         )
         if not response["success"]:
             bbb_chat.end_chat(meeting_id)
-            return _forward_response("frontend-chat", response)
+            return _forward_response("stream-chat", response)
 
         # Start bbb-live
         time.sleep(0.5)  # TODO remove it if it doesn't fix bbb-chat's chat_user issue
@@ -134,7 +156,7 @@ class StartStream(PostApiPoint):
             channel.meeting_password
         )
         if not response["success"]:
-            channel.frontend.end_chat(meeting_id)
+            StreamChat.objects.first().end_chat(meeting_id)
             bbb_chat.end_chat(meeting_id)
             return _forward_response("bbb-live", response)
 
@@ -162,14 +184,19 @@ class JoinStream(GetApiPoint):
                 reason="No channel was opened for this meeting"
             )
 
+        # Get frontend with least user and increase counter
+        c2f = Channel2Frontend.objects.filter(channel=channel).order_by("viewers").first()
+        c2f.viewers = F("viewers") + 1
+        c2f.save()
+        frontend = c2f.frontend
+
         get = {
             "meeting_id": meeting_id,
             "user_name": user_name,
         }
-        get["checksum"] = get_checksum(get, channel.frontend.secret, "join")
-
+        get["checksum"] = get_checksum(get, frontend.secret, "join")
         return HttpResponseRedirect(
-            os.path.join(channel.frontend.url, "api/v1/join?") + urlencode(get)
+            os.path.join(frontend.url, "api/v1/join?") + urlencode(get)
         )
 
 
@@ -178,7 +205,8 @@ class EndStream(PostApiPoint):
     endpoint = "endStream"
     required_parameters = ["meeting_id"]
 
-    def safe_post(self, request, parameters, *args, **kwargs):
+    @staticmethod
+    def safe_post(request, parameters, *args, **kwargs):
         meeting_id = parameters["meeting_id"]
 
         try:
@@ -201,13 +229,18 @@ class EndStream(PostApiPoint):
             if not response["success"]:
                 errors.append(("bbb-live", response))
 
-        response = channel.frontend.end_chat(channel.meeting_id)
+        response = StreamChat.objects.first().end_chat(channel.meeting_id)
         if not response["success"]:
-            errors.append(("frontend-chat", response))
+            errors.append(("stream-chat", response))
 
-        response = channel.frontend.close_channel(channel.meeting_id)
+        response = StreamEdge.objects.first().close_channel(channel.meeting_id)
         if not response["success"]:
-            errors.append(("streaming channel", response))
+            errors.append(("stream-edge", response))
+
+        for frontend in channel.frontends.all():
+            response = frontend.close_channel(channel.meeting_id)
+            if not response["success"]:
+                errors.append(("stream-frontend", response))
 
         channel.delete()
 
@@ -255,30 +288,12 @@ class BBBObserver(PostApiPoint):
         header = event["header"]
         body = event["body"]
 
-        if header["name"] != "MeetingEndingEvtMsg":
+        if header["name"] == "MeetingEndingEvtMsg":
+            return EndStream.safe_post(request, {"meeting_id": header["meetingId"]})
+        else:
             return JsonResponse(
                 {"success": False, "message": "Uninteresting event"},
                 status=400,
                 reason="Uninteresting event"
             )
 
-        # Get stream for meeting
-        try:
-            channel = Channel.objects.get(internal_meeting_id=header["meetingId"])
-        except Channel.DoesNotExist:
-            return JsonResponse(
-                {"success": True, "message": "This meeting had no stream."},
-                status=304,
-                reason="This meeting had no stream."
-            )
-
-        # Stop stream
-        channel.bbb_chat.end_chat(channel.meeting_id)
-        channel.frontend.end_chat(channel.meeting_id)
-        channel.bbb_live.stop_stream(channel.meeting_id)
-        channel.frontend.close_channel(channel.meeting_id)
-        channel.delete()
-
-        return JsonResponse(
-            {"success": True, "message": "Stream stopped successfully."}
-        )
