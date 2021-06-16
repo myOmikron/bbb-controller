@@ -205,7 +205,8 @@ class EndStream(PostApiPoint):
     endpoint = "endStream"
     required_parameters = ["meeting_id"]
 
-    def safe_post(self, request, parameters, *args, **kwargs):
+    @staticmethod
+    def safe_post(request, parameters, *args, **kwargs):
         meeting_id = parameters["meeting_id"]
 
         try:
@@ -287,30 +288,12 @@ class BBBObserver(PostApiPoint):
         header = event["header"]
         body = event["body"]
 
-        if header["name"] != "MeetingEndingEvtMsg":
+        if header["name"] == "MeetingEndingEvtMsg":
+            return EndStream.safe_post(request, {"meeting_id": header["meetingId"]})
+        else:
             return JsonResponse(
                 {"success": False, "message": "Uninteresting event"},
                 status=400,
                 reason="Uninteresting event"
             )
 
-        # Get stream for meeting
-        try:
-            channel = Channel.objects.get(internal_meeting_id=header["meetingId"])
-        except Channel.DoesNotExist:
-            return JsonResponse(
-                {"success": True, "message": "This meeting had no stream."},
-                status=304,
-                reason="This meeting had no stream."
-            )
-
-        # Stop stream
-        channel.bbb_chat.end_chat(channel.meeting_id)
-        channel.frontend.end_chat(channel.meeting_id)
-        channel.bbb_live.stop_stream(channel.meeting_id)
-        channel.frontend.close_channel(channel.meeting_id)
-        channel.delete()
-
-        return JsonResponse(
-            {"success": True, "message": "Stream stopped successfully."}
-        )
