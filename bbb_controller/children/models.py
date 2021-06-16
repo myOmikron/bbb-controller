@@ -101,6 +101,10 @@ class BBBLive(_Child):
     url = models.CharField(default="", max_length=255)
     secret = models.CharField(default="", max_length=255)
 
+    @property
+    def api_url(self):
+        return os.path.join(self.url, "api", "v1")
+
     def start_stream(self, rtmp_uri, meeting_id, meeting_password):
         return _post(self.url, self.secret, "startStream", {
             "rtmp_uri": rtmp_uri,
