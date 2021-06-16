@@ -106,14 +106,14 @@ class BBBLive(_Child):
         return os.path.join(self.url, "api", "v1")
 
     def start_stream(self, rtmp_uri, meeting_id, meeting_password):
-        return _post(self.url, self.secret, "startStream", {
+        return _post(self.api_url, self.secret, "startStream", {
             "rtmp_uri": rtmp_uri,
             "meeting_id": meeting_id,
             "meeting_password": meeting_password,
         })
 
     def stop_stream(self, meeting_id):
-        return _post(self.url, self.secret, "stopStream", {
+        return _post(self.api_url, self.secret, "stopStream", {
             "meeting_id": meeting_id,
         })
 
