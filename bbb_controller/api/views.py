@@ -289,7 +289,18 @@ class BBBObserver(PostApiPoint):
         body = event["body"]
 
         if header["name"] == "MeetingEndingEvtMsg":
-            return EndStream.safe_post(request, {"meeting_id": header["meetingId"]})
+            # Convert internal to external id by lookup
+            try:
+                channel = Channel.objects.get(internal_meeting_id=header["meetingId"])
+            except Channel.DoesNotExist:
+                return JsonResponse(
+                    {"success": True, "message": "This meeting had no stream."},
+                    status=404,
+                    reason="This meeting had no stream."
+                )
+
+            # Deligate logic to EndStream
+            return EndStream.safe_post(request, {"meeting_id": channel.meeting_id})
         else:
             return JsonResponse(
                 {"success": False, "message": "Uninteresting event"},
