@@ -22,3 +22,7 @@ class Channel(models.Model):
     @cached_property
     def meeting_password(self):
         return str(self.bbb_chat.bbb.api.get_meeting_info(self.meeting_id)["xml"]["attendeePW"])
+
+    def __str__(self):
+        return self.meeting_id
+

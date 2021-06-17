@@ -10,4 +10,11 @@ class C2FAdmin(admin.ModelAdmin):
 
 @admin.register(Channel)
 class ChannelAdmin(admin.ModelAdmin):
-    pass
+    list_display = ("__str__", "bigbluebutton", "streamed", "bbb_live")
+
+    def streamed(self, channel):
+        return channel.bbb_live is not None
+    streamed.boolean = True
+
+    def bigbluebutton(self, channel: Channel):
+        return str(channel.bbb_chat.bbb)
