@@ -105,6 +105,13 @@ class StartStream(PostApiPoint):
             )
         channel = Channel.objects.filter(meeting_id=meeting_id).last()
 
+        if channel.bbb_live is not None:
+            return JsonResponse(
+                {"success": False, "message": "The stream has already been started."},
+                status=304,
+                reason="The stream has already been started."
+            )
+
         # Search in bbb instances for meeting id
         for bbb in BBB.objects.all():
             if bbb.api.is_meeting_running(meeting_id).is_meeting_running():
@@ -119,8 +126,14 @@ class StartStream(PostApiPoint):
         # Get bbb-chat for bbb instance
         bbb_chat = BBBChat.objects.get(bbb=bbb)
 
-        # Get bbb-live with least running streams
-        bbb_live = BBBLive.objects.annotate(channels=Count("channel")).earliest("channels")
+        # Get bbb-live without running a stream
+        bbb_live = BBBLive.objects.filter(channel=None).first()
+        if bbb_live is None:
+            return JsonResponse(
+                {"success": False, "message": "All streamers are already busy."},
+                status=503,
+                reason="All streamers are already busy."
+            )
 
         # Update channel with bbb and streamer
         channel.internal_meeting_id = str(bbb.api.get_meeting_info(meeting_id)["xml"]["internalMeetingID"])
