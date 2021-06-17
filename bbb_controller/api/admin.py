@@ -18,6 +18,6 @@ class ChannelAdmin(admin.ModelAdmin):
 
     def bigbluebutton(self, channel: Channel):
         if channel.bbb_chat is None:
-            return "still unknown"
+            return "-"
         else:
             return str(channel.bbb_chat.bbb)
